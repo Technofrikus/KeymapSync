@@ -407,3 +407,108 @@ button:disabled {
   font-size: 13px;
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  margin-bottom: 8px;
+  padding: 8px 0;
+  border-bottom: 2px solid #1f2937;
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.add-button {
+  padding: 4px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  background: #2563eb;
+  border: 1px solid #1d4ed8;
+  color: #e5e7eb;
+  cursor: pointer;
+  border-radius: 4px;
+  min-width: 32px;
+}
+
+.add-button:hover {
+  background: #1d4ed8;
+}
+
+.override-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.override-table thead {
+  position: sticky;
+  top: 0;
+  background: #0f172a;
+  z-index: 10;
+}
+
+.override-table th {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 2px solid #1f2937;
+  color: #cbd5e1;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.override-table td {
+  padding: 6px;
+  border-bottom: 1px solid #1f2937;
+}
+
+.override-table tbody tr:hover {
+  background: #111827;
+}
+
+.override-table .input-cell input {
+  width: 100%;
+  min-width: 100px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.action-cell {
+  width: 50px;
+  text-align: center;
+  padding: 4px;
+}
+
+.delete-button {
+  padding: 4px 8px;
+  font-size: 14px;
+  background: transparent;
+  border: 1px solid #334155;
+  color: #e5e7eb;
+  cursor: pointer;
+  border-radius: 4px;
+  min-width: 32px;
+}
+
+.delete-button:hover {
+  background: #dc2626;
+  border-color: #b91c1c;
+}
+
+.override-table .input-cell input.invalid {
+  border-color: #dc2626;
+  background-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+.override-table .input-cell input.invalid:focus {
+  outline: 2px solid #dc2626;
+  outline-offset: -2px;
+}
+

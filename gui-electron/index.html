@@ -13,7 +13,8 @@
         <span class="subtitle">Sync your Vial layers</span>
       </div>
       <div class="top-actions">
-        <button id="syncBtn" class="primary">Sync</button>
+        <button id="saveBtn" class="primary" title="Save configuration file">Save</button>
+        <button id="syncBtn" class="primary" title="Generate and sync Vial keymap files">Sync</button>
         <button id="settingsBtn" title="Settings & Logs">⚙</button>
       </div>
     </header>
@@ -48,11 +49,44 @@
               </thead>
               <tbody id="alphaTableBody"></tbody>
             </table>
+            
+            <div class="section-header">
+              <h3>TapDance</h3>
+              <button id="addTapDance" class="add-button" title="Add new TapDance entry">+</button>
+            </div>
+            <table id="tapDanceTable" class="override-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Tap</th>
+                  <th>Hold</th>
+                  <th>Double Tap</th>
+                  <th>Tap+Hold</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="tapDanceTableBody"></tbody>
+            </table>
+            
+            <div class="section-header">
+              <h3>Combos</h3>
+              <button id="addCombo" class="add-button" title="Add new Combo entry">+</button>
+            </div>
+            <table id="comboTable" class="override-table">
+              <thead>
+                <tr>
+                  <th>Keys</th>
+                  <th>Result</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="comboTableBody"></tbody>
+            </table>
           </div>
           <aside class="help-panel" id="helpPanel">
             <div class="help-panel-resize-handle" id="helpPanelResize"></div>
             <div class="help-header">
-              <h3>Hilfe & Hinweise</h3>
+              <h3>Help & Notes</h3>
             </div>
             <div class="help-body">
               <div class="hint-block">
@@ -60,9 +94,119 @@
                 <div><strong>Input:</strong> <span id="inputPathLabel"></span></div>
                 <div><strong>Output:</strong> <span id="outputPathLabel"></span></div>
               </div>
-              <h4>Tap-Dance Hilfe</h4>
+              <h4>Tap-Dance Help</h4>
               <ul id="tapdanceList"></ul>
-              <div class="hint">Base-Feld akzeptiert Freitext (z.B. TD(3)).</div>
+              <div class="hint">Base field accepts free text (e.g. TD(3)).</div>
+              
+              <h4>Combo Keycodes</h4>
+              <div class="hint">
+                <p><strong>Keys field:</strong> Enter characters or keycodes separated by commas (e.g. "J, K" or "KC_J, KC_K").</p>
+                <p><strong>Result field:</strong> Enter a keycode, use Quantum Keycode format, or Layer functions:</p>
+                <ul style="margin-top: 8px; padding-left: 20px;">
+                  <li>Simple: <code>ESC</code>, <code>KC_ESC</code>, <code>Bksp</code></li>
+                  <li>Quantum format: <code>Alt+Bksp</code>, <code>Ctrl+Shift+A</code>, <code>Cmd+C</code></li>
+                  <li>Layer functions: <code>MO(1)</code>, <code>TG(2)</code>, <code>TO(3)</code>, <code>TT(1)</code>, <code>OSL(2)</code></li>
+                  <li>Supported modifiers: <code>Alt</code>, <code>Ctrl</code>, <code>Shift</code>, <code>Cmd</code> (or <code>Win</code>, <code>Super</code>)</li>
+                  <li>Right modifiers: <code>RAlt</code>, <code>RCtrl</code>, <code>RShift</code>, <code>RCmd</code></li>
+                </ul>
+                <p style="margin-top: 8px;">Quantum Keycodes are automatically converted to QMK format (e.g. <code>Alt+Bksp</code> → <code>LALT(KC_BSPC)</code>).</p>
+                <p style="margin-top: 8px;"><strong>Layer Functions:</strong></p>
+                <ul style="margin-top: 4px; padding-left: 20px; font-size: 11px;">
+                  <li><code>MO(layer)</code> - Momentary Layer (activates layer while held)</li>
+                  <li><code>TG(layer)</code> - Toggle Layer (toggles layer on/off)</li>
+                  <li><code>TO(layer)</code> - Turn On Layer (activates layer permanently)</li>
+                  <li><code>TT(layer)</code> - Tap Toggle Layer (tap = toggle, hold = momentary)</li>
+                  <li><code>OSL(layer)</code> - One Shot Layer (activates layer for one keypress sequence)</li>
+                </ul>
+                <p style="margin-top: 8px; font-size: 10px; color: #94a3b8;"><em>You can also use formats like <code>MO1</code> or <code>MO 1</code> instead of <code>MO(1)</code>.</em></p>
+              </div>
+              
+              <h4>Supported Keycodes</h4>
+              <div class="hint" style="font-size: 11px; line-height: 1.4;">
+                <p><strong>Letters & Numbers:</strong> <code>A-Z</code>, <code>0-9</code> (or <code>KC_A</code> - <code>KC_Z</code>, <code>KC_0</code> - <code>KC_9</code>)</p>
+                
+                <p><strong>Special Keys:</strong></p>
+                <ul style="margin-top: 4px; padding-left: 20px; margin-bottom: 8px;">
+                  <li><code>SPACE</code> or <code>SPC</code> → <code>KC_SPC</code></li>
+                  <li><code>ENTER</code> or <code>ENT</code> → <code>KC_ENT</code></li>
+                  <li><code>TAB</code> → <code>KC_TAB</code></li>
+                  <li><code>ESC</code> or <code>ESCAPE</code> → <code>KC_ESC</code></li>
+                  <li><code>BACKSPACE</code>, <code>BSPC</code>, or <code>BKSP</code> → <code>KC_BSPC</code></li>
+                  <li><code>DELETE</code> or <code>DEL</code> → <code>KC_DEL</code></li>
+                </ul>
+                
+                <p><strong>Arrow Keys:</strong></p>
+                <ul style="margin-top: 4px; padding-left: 20px; margin-bottom: 8px;">
+                  <li><code>UP</code> → <code>KC_UP</code></li>
+                  <li><code>DOWN</code> → <code>KC_DOWN</code></li>
+                  <li><code>LEFT</code> → <code>KC_LEFT</code></li>
+                  <li><code>RIGHT</code> → <code>KC_RIGHT</code></li>
+                  <li><code>HOME</code> → <code>KC_HOME</code></li>
+                  <li><code>END</code> → <code>KC_END</code></li>
+                  <li><code>PAGEUP</code> or <code>PGUP</code> → <code>KC_PGUP</code></li>
+                  <li><code>PAGEDOWN</code> or <code>PGDN</code> → <code>KC_PGDN</code></li>
+                </ul>
+                
+                <p><strong>Modifiers:</strong></p>
+                <ul style="margin-top: 4px; padding-left: 20px; margin-bottom: 8px;">
+                  <li><code>CTRL</code>, <code>LCTRL</code>, or <code>LCTL</code> → <code>KC_LCTL</code></li>
+                  <li><code>SHIFT</code>, <code>LSHIFT</code>, or <code>LSFT</code> → <code>KC_LSFT</code></li>
+                  <li><code>ALT</code> or <code>LALT</code> → <code>KC_LALT</code></li>
+                  <li><code>CMD</code>, <code>WIN</code>, <code>SUPER</code>, <code>LGUI</code>, <code>LCMD</code>, or <code>LWIN</code> → <code>KC_LGUI</code></li>
+                  <li><code>RCTRL</code> or <code>RCTL</code> → <code>KC_RCTL</code></li>
+                  <li><code>RSHIFT</code> or <code>RSFT</code> → <code>KC_RSFT</code></li>
+                  <li><code>RALT</code> → <code>KC_RALT</code></li>
+                  <li><code>RGUI</code>, <code>RCMD</code>, or <code>RWIN</code> → <code>KC_RGUI</code></li>
+                </ul>
+                
+                <p><strong>Function Keys:</strong> <code>F1</code> - <code>F24</code> → <code>KC_F1</code> - <code>KC_F24</code></p>
+                
+                <p><strong>Punctuation & Symbols:</strong></p>
+                <ul style="margin-top: 4px; padding-left: 20px; margin-bottom: 8px;">
+                  <li><code>-</code> or <code>MINUS</code> → <code>KC_MINS</code></li>
+                  <li><code>=</code> or <code>EQUAL</code> → <code>KC_EQL</code></li>
+                  <li><code>[</code> or <code>LBRACKET</code> → <code>KC_LBRC</code></li>
+                  <li><code>]</code> or <code>RBRACKET</code> → <code>KC_RBRC</code></li>
+                  <li><code>\</code> or <code>BACKSLASH</code> → <code>KC_BSLS</code></li>
+                  <li><code>;</code> or <code>SEMICOLON</code> → <code>KC_SCLN</code></li>
+                  <li><code>'</code> or <code>QUOTE</code> → <code>KC_QUOT</code></li>
+                  <li><code>`</code> or <code>GRAVE</code> → <code>KC_GRV</code></li>
+                  <li><code>,</code> or <code>COMMA</code> → <code>KC_COMM</code></li>
+                  <li><code>.</code> or <code>DOT</code> → <code>KC_DOT</code></li>
+                  <li><code>/</code> or <code>SLASH</code> → <code>KC_SLSH</code></li>
+                </ul>
+                
+                <p><strong>Media Keys:</strong></p>
+                <ul style="margin-top: 4px; padding-left: 20px; margin-bottom: 8px;">
+                  <li><code>PLAY</code> or <code>MPLY</code> → <code>KC_MPLY</code></li>
+                  <li><code>PAUSE</code> → <code>KC_MPLY</code> (same as play in QMK)</li>
+                  <li><code>STOP</code> or <code>MSTP</code> → <code>KC_MSTP</code></li>
+                  <li><code>NEXT</code>, <code>MNXT</code>, or <code>NEXTTrack</code> → <code>KC_MNXT</code></li>
+                  <li><code>PREVIOUS</code>, <code>MPRV</code>, <code>PREV</code>, or <code>PREVIOUSTRACK</code> → <code>KC_MPRV</code></li>
+                  <li><code>FASTFORWARD</code>, <code>MFFD</code>, or <code>FFD</code> → <code>KC_MFFD</code></li>
+                  <li><code>REWIND</code>, <code>MRWD</code>, or <code>RWD</code> → <code>KC_MRWD</code></li>
+                </ul>
+                
+                <p><strong>Mac-Specific Keys:</strong></p>
+                <ul style="margin-top: 4px; padding-left: 20px; margin-bottom: 8px;">
+                  <li><code>MACPLAY</code> → <code>KC_MPLY</code></li>
+                  <li><code>MACPAUSE</code> → <code>KC_MPLY</code></li>
+                  <li><code>MACNEXT</code> → <code>KC_MNXT</code></li>
+                  <li><code>MACPREVIOUS</code> or <code>MACPREV</code> → <code>KC_MPRV</code></li>
+                  <li><code>MacSSV+</code> or <code>MACSSV+</code> → <code>LSA(KC__VOLUP)</code> (Mac Small Step Volume Up)</li>
+                  <li><code>MacSSV-</code> or <code>MACSSV-</code> → <code>LSA(KC__VOLDOWN)</code> (Mac Small Step Volume Down)</li>
+                </ul>
+                <p style="margin-top: 4px; padding-left: 20px; font-size: 10px; color: #94a3b8;"><em>MacSSV (Mac Small Step Volume) provides finer volume control on macOS with smaller increments than standard volume keys. SS stands for "Small Step".</em></p>
+                
+                <p><strong>Other Keys:</strong></p>
+                <ul style="margin-top: 4px; padding-left: 20px; margin-bottom: 8px;">
+                  <li><code>CAPS</code> or <code>CAPSLOCK</code> → <code>KC_CAPS</code></li>
+                  <li><code>NUMLOCK</code> → <code>KC_NUM</code></li>
+                  <li><code>SCROLLLOCK</code> → <code>KC_SCRL</code></li>
+                </ul>
+                
+                <p style="margin-top: 8px; font-size: 10px; color: #94a3b8;"><em>Note: You can also use the QMK keycode format directly (e.g. <code>KC_BSPC</code> instead of <code>BACKSPACE</code>).</em></p>
+              </div>
             </div>
           </aside>
         </div>
@@ -109,6 +253,7 @@
       </section>
     </main>
 
+    <script src="./keycode-mapping.js"></script>
     <script src="./renderer.js"></script>
   </body>
 </html>

@@ -54,6 +54,41 @@ function createWindow() {
   if (isDev) {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
+  
+  // Reset unsaved changes when window is created
+  hasUnsavedChanges = false;
+  
+  // Handle window close to check for unsaved changes
+  mainWindow.on('close', async (event) => {
+    if (hasUnsavedChanges) {
+      event.preventDefault();
+      
+      const response = await dialog.showMessageBox(mainWindow, {
+        type: 'question',
+        buttons: ['Save', 'Don\'t Save', 'Cancel'],
+        defaultId: 0,
+        cancelId: 2,
+        title: 'Unsaved Changes',
+        message: 'You have unsaved changes. Do you want to save them before closing?',
+        detail: 'Your changes will be lost if you don\'t save them.'
+      });
+      
+      if (response.response === 0) {
+        // Save
+        mainWindow.webContents.send('app:save-before-quit');
+        // Wait for save to complete, then close
+        setTimeout(() => {
+          hasUnsavedChanges = false;
+          mainWindow.destroy();
+        }, 1000);
+      } else if (response.response === 1) {
+        // Don't save
+        hasUnsavedChanges = false;
+        mainWindow.destroy();
+      }
+      // If response is 2 (Cancel), do nothing - window won't close
+    }
+  });
 }
 
 app.whenReady().then(() => {
@@ -66,6 +101,8 @@ app.whenReady().then(() => {
   });
 });
 
+let hasUnsavedChanges = false;
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
@@ -73,6 +110,14 @@ app.on('window-all-closed', () => {
 });
 
 ipcMain.handle('app:defaults', () => defaultPaths);
+
+ipcMain.handle('app:setUnsavedChanges', (_event, hasChanges) => {
+  hasUnsavedChanges = hasChanges;
+});
+
+ipcMain.handle('app:checkUnsavedChanges', () => {
+  return hasUnsavedChanges;
+});
 
 ipcMain.handle('dialog:select', async (_event, opts) => {
   const properties = opts?.type === 'file' ? ['openFile'] : ['openDirectory'];

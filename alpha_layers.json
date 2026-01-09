@@ -10,44 +10,212 @@
     "number": 2
   },
   "alphaMappings": {
-    "Q": { "layer1": "NO", "layer2": "°", "base": null, "aliases": [] },
-    "W": { "layer1": "NO", "layer2": "^", "base": null, "aliases": [] },
-    "E": { "layer1": "NO", "layer2": "{", "base": null, "aliases": [] },
-    "R": { "layer1": "NO", "layer2": "}", "base": null, "aliases": [] },
-    "T": { "layer1": "NO", "layer2": "$", "base": null, "aliases": [] },
-    "Y": { "layer1": "NO", "layer2": "\"", "base": null, "aliases": [] },
-    "U": { "layer1": "+", "layer2": "ü", "base": null, "aliases": [] },
-    "I": { "layer1": "-", "layer2": "&", "base": null, "aliases": [] },
-    "O": { "layer1": "*", "layer2": "ö", "base": null, "aliases": [] },
-    "P": { "layer1": "/", "layer2": "§", "base": null, "aliases": [] },
-    "_row2": { "layer1": null, "layer2": null, "base": null, "aliases": [] },
-    "A": { "layer1": "1", "layer2": "ä", "base": null, "aliases": [] },
-    "S": { "layer1": "2", "layer2": "ß", "base": null, "aliases": [] },
-    "D": { "layer1": "3", "layer2": "#", "base": null, "aliases": [] },
-    "F": { "layer1": "4", "layer2": "!", "base": null, "aliases": [] },
-    "G": { "layer1": "5", "layer2": "-", "base": null, "aliases": [] },
+    "Q": {
+      "layer1": "NO",
+      "layer2": "°",
+      "base": null,
+      "aliases": []
+    },
+    "W": {
+      "layer1": "NO",
+      "layer2": "^",
+      "base": null,
+      "aliases": []
+    },
+    "E": {
+      "layer1": "NO",
+      "layer2": "{",
+      "base": null,
+      "aliases": []
+    },
+    "R": {
+      "layer1": "NO",
+      "layer2": "}",
+      "base": null,
+      "aliases": []
+    },
+    "T": {
+      "layer1": "NO",
+      "layer2": "$",
+      "base": null,
+      "aliases": []
+    },
+    "Y": {
+      "layer1": "NO",
+      "layer2": "\"",
+      "base": null,
+      "aliases": []
+    },
+    "U": {
+      "layer1": "+",
+      "layer2": "ü",
+      "base": null,
+      "aliases": []
+    },
+    "I": {
+      "layer1": "-",
+      "layer2": "&",
+      "base": null,
+      "aliases": []
+    },
+    "O": {
+      "layer1": "*",
+      "layer2": "ö",
+      "base": null,
+      "aliases": []
+    },
+    "P": {
+      "layer1": "/",
+      "layer2": "§",
+      "base": null,
+      "aliases": []
+    },
+    "_row2": {
+      "layer1": null,
+      "layer2": null,
+      "base": null,
+      "aliases": []
+    },
+    "A": {
+      "layer1": "1",
+      "layer2": "ä",
+      "base": null,
+      "aliases": []
+    },
+    "S": {
+      "layer1": "2",
+      "layer2": "ß",
+      "base": null,
+      "aliases": []
+    },
+    "D": {
+      "layer1": "3",
+      "layer2": "#",
+      "base": null,
+      "aliases": []
+    },
+    "F": {
+      "layer1": "4",
+      "layer2": "!",
+      "base": null,
+      "aliases": []
+    },
+    "G": {
+      "layer1": "5",
+      "layer2": "-",
+      "base": null,
+      "aliases": []
+    },
     "H": {
       "layer1": "6",
       "layer2": "%",
       "base": "TD(H_GUIH)",
-      "aliases": [ "TD(H_GUIH)" ]
+      "aliases": [
+        "TD(H_GUIH)"
+      ]
     },
-    "J": { "layer1": "7", "layer2": "?", "base": null, "aliases": [] },
-    "K": { "layer1": "8", "layer2": "(", "base": null, "aliases": [] },
-    "L": { "layer1": "9", "layer2": ")", "base": null, "aliases": [] },
-    "_row3": { "layer1": null, "layer2": null, "base": null, "aliases": [] },
-    "Z": { "layer1": "NO", "layer2": "<", "base": null, "aliases": [] },
-    "X": { "layer1": "NO", "layer2": ">", "base": null, "aliases": [] },
-    "C": { "layer1": "NO", "layer2": "[", "base": null, "aliases": [] },
-    "V": { "layer1": "NO", "layer2": "]", "base": null, "aliases": [] },
-    "B": { "layer1": "NO", "layer2": "'", "base": null, "aliases": [] },
-    "N": { "layer1": "NO", "layer2": "`", "base": null, "aliases": [] },
-    "M": { "layer1": "=", "layer2": "_", "base": null, "aliases": [] },
-    ".": { "layer1": "", "layer2": "", "base": null, "aliases": [] },
-    ",": { "layer1": "", "layer2": "|", "base": null, "aliases": [] },
-    "-": { "layer1": "", "layer2": "", "base": null, "aliases": [] }
+    "J": {
+      "layer1": "7",
+      "layer2": "?",
+      "base": null,
+      "aliases": []
+    },
+    "K": {
+      "layer1": "8",
+      "layer2": "(",
+      "base": null,
+      "aliases": []
+    },
+    "L": {
+      "layer1": "9",
+      "layer2": ")",
+      "base": null,
+      "aliases": []
+    },
+    "_row3": {
+      "layer1": null,
+      "layer2": null,
+      "base": null,
+      "aliases": []
+    },
+    "Z": {
+      "layer1": "NO",
+      "layer2": "<",
+      "base": null,
+      "aliases": []
+    },
+    "X": {
+      "layer1": "NO",
+      "layer2": ">",
+      "base": null,
+      "aliases": []
+    },
+    "C": {
+      "layer1": "NO",
+      "layer2": "[",
+      "base": null,
+      "aliases": []
+    },
+    "V": {
+      "layer1": "NO",
+      "layer2": "]",
+      "base": null,
+      "aliases": []
+    },
+    "B": {
+      "layer1": "NO",
+      "layer2": "'",
+      "base": null,
+      "aliases": []
+    },
+    "N": {
+      "layer1": "NO",
+      "layer2": "`",
+      "base": null,
+      "aliases": []
+    },
+    "M": {
+      "layer1": "=",
+      "layer2": "_",
+      "base": null,
+      "aliases": []
+    },
+    ".": {
+      "layer1": "",
+      "layer2": "",
+      "base": null,
+      "aliases": []
+    },
+    ",": {
+      "layer1": "",
+      "layer2": "|",
+      "base": null,
+      "aliases": []
+    },
+    "-": {
+      "layer1": "",
+      "layer2": "",
+      "base": null,
+      "aliases": []
+    }
   },
-  "comboOverrides": [],
+  "comboOverrides": [
+    {
+      "keys": [
+        "KC_J",
+        "KC_K"
+      ],
+      "result": "KC_BSPC"
+    },
+    {
+      "keys": [
+        "KC_J",
+        "KC_K",
+        "KC_L"
+      ],
+      "result": "LALT(KC_BSPC)"
+    }
+  ],
   "tapDanceOverrides": [
     {
       "name": "H_GUIH",
@@ -60,9 +228,14 @@
   "comboOverrideExample": [
     {
       "comment": "Example shape only; not used unless moved into comboOverrides",
-      "keys": ["KC_Q", "KC_W"],
+      "keys": [
+        "KC_Q",
+        "KC_W"
+      ],
       "result": "KC_ESC",
-      "layers": [0]
+      "layers": [
+        0
+      ]
     }
   ],
   "tapDanceOverrideExample": [
@@ -82,4 +255,3 @@
     }
   ]
 }
-
