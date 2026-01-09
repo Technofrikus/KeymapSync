@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KeymapSync GUI</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="title">
+        <h1>KeymapSync</h1>
+        <span class="subtitle">Sync your Vial layers</span>
+      </div>
+      <div class="top-actions">
+        <button id="syncBtn" class="primary">Sync</button>
+        <button id="settingsBtn" title="Settings & Logs">⚙</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section id="gridView" class="view visible">
+        <div class="grid-header">
+          <div class="status">
+            <span id="runStatus"></span>
+          </div>
+          <div class="header-actions">
+            <label for="layoutSelect" class="layout-label">Layout:</label>
+            <select id="layoutSelect" class="layout-select">
+              <option value="qwerty">QWERTY</option>
+              <option value="dvorak">Dvorak</option>
+              <option value="colemak">Colemak</option>
+              <option value="alphabetical">Alphabetisch</option>
+            </select>
+            <button id="toggleHelp" class="help-toggle" title="Hilfe ein/ausblenden">▾ Hilfe</button>
+          </div>
+        </div>
+        <div class="grid-and-help" id="gridAndHelp">
+          <div class="table-container">
+            <table id="alphaTable" class="alpha-table">
+              <thead>
+                <tr>
+                  <th>Key</th>
+                  <th>Base</th>
+                  <th>Layer 1</th>
+                  <th>Layer 2</th>
+                </tr>
+              </thead>
+              <tbody id="alphaTableBody"></tbody>
+            </table>
+          </div>
+          <aside class="help-panel" id="helpPanel">
+            <div class="help-panel-resize-handle" id="helpPanelResize"></div>
+            <div class="help-header">
+              <h3>Hilfe & Hinweise</h3>
+            </div>
+            <div class="help-body">
+              <div class="hint-block">
+                <div><strong>Config:</strong> <span id="configPathLabel"></span></div>
+                <div><strong>Input:</strong> <span id="inputPathLabel"></span></div>
+                <div><strong>Output:</strong> <span id="outputPathLabel"></span></div>
+              </div>
+              <h4>Tap-Dance Hilfe</h4>
+              <ul id="tapdanceList"></ul>
+              <div class="hint">Base-Feld akzeptiert Freitext (z.B. TD(3)).</div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="drawer" class="drawer">
+        <div class="drawer-header">
+          <h2>Einstellungen & Logs</h2>
+          <button id="closeDrawer">✕</button>
+        </div>
+        <div class="field">
+          <label>Config file</label>
+          <div class="inline">
+            <input id="configPath" type="text" readonly />
+            <button id="pickConfig">Pick…</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Original folder</label>
+          <div class="inline">
+            <input id="inputPath" type="text" readonly />
+            <button id="pickInput">Pick…</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Output folder</label>
+          <div class="inline">
+            <input id="outputPath" type="text" readonly />
+            <button id="pickOutput">Pick…</button>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="reloadConfig">Reload</button>
+          <button id="saveConfig">Save config</button>
+          <span id="configStatus"></span>
+        </div>
+        <div class="logs-panel">
+          <div class="actions">
+            <button id="clearLogs">Clear</button>
+            <button id="copyLogs">Copy</button>
+          </div>
+          <pre id="logOutput"></pre>
+        </div>
+      </section>
+    </main>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>
+

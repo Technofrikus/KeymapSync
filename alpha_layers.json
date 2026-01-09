@@ -29,7 +29,7 @@
     "H": {
       "layer1": "6",
       "layer2": "%",
-      "base": null,
+      "base": "TD(H_GUIH)",
       "aliases": [ "TD(H_GUIH)" ]
     },
     "J": { "layer1": "7", "layer2": "?", "base": null, "aliases": [] },
@@ -48,7 +48,14 @@
     "-": { "layer1": "", "layer2": "", "base": null, "aliases": [] }
   },
   "comboOverrides": [],
-  "tapDanceOverrides": [],
+  "tapDanceOverrides": [
+    {
+      "name": "H_GUIH",
+      "trigger": "KC_H",
+      "tap": "KC_H",
+      "hold": "LGUI(KC_H)"
+    }
+  ],
   "keyOverrideOverrides": [],
   "comboOverrideExample": [
     {

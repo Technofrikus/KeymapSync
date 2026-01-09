@@ -27,13 +27,21 @@ Single-source your alpha symbols/numbers (and optional base/tap-dance) and apply
 - If you provide an explicit QMK expression (e.g., `LSFT(KC_MINUS)`), it is used verbatim.
 - Use `"NO"` (case-insensitive) to set `KC_NO`, or `"TRNS"`/`"TRANSPARENT"` for `KC_TRNS`.
 
-## Running
+## Running (CLI)
 From repo root (Node 18+):
 ```bash
-node keyboards/0_privat/vial-keymaps/generate_vial_keymaps.test.js
-node keyboards/0_privat/vial-keymaps/generate_vial_keymaps.js
+node generate_vial_keymaps.js
 ```
 Check `output/` for the updated `.vil` files. Flash or import via Vial as needed.
+
+## GUI (Electron)
+Located in `gui-electron/` (keeps CLI and GUI separated).
+```bash
+cd gui-electron
+npm install   # installs Electron locally
+npm start     # launches KeymapSync GUI
+```
+GUI features: run generator, edit `alpha_layers.json`, view logs. Defaults point to the repo root (`original/`, `output/`, `alpha_layers.json`).
 
 ## Tips
 - If a symbol isn’t translating as desired, enter the exact QMK keycode expression in `alpha_layers.json`; it will be used verbatim.
