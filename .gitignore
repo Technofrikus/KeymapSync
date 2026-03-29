@@ -6,3 +6,4 @@ gui-electron/dist/
 gui-electron/bin/
 output/
 Reference only/vitaly-main/target/
+.git-filter-repo-replacements.txt
