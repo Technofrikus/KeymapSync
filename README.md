@@ -43,7 +43,22 @@ npm start     # launches KeymapSync GUI
 ```
 GUI features: run generator, edit `alpha_layers.json`, view logs. Defaults point to the repo root (`original/`, `output/`, `alpha_layers.json`).
 
+**Online sync (write to keyboard)** uses the `vitaly` CLI. In development, the GUI uses `Reference only/vitaly-main/target/release/vitaly` **only if** that file matches your OS (macOS/Windows ignore a Linux ELF left over from a Docker build). Otherwise it runs `vitaly` from your **PATH**. Rebuild natively **on the same OS** as Electron (needs **Rust 1.88+** for `edition = "2024"`):
+```bash
+./scripts/build-vitaly.sh
+```
+Docker-only build (writes a **Linux** binary — CI/Linux only; on Mac the GUI will skip it and use `PATH`):
+```bash
+./scripts/build-vitaly-docker.sh
+```
+Remove pulled `rust:*` Docker images when you no longer need them (Docker must be running):
+```bash
+./scripts/cleanup-docker-rust-images.sh
+```
+**Stock vitaly** often exits with code `0` even when it prints `Error:` on stderr. The KeymapSync GUI treats that as failure by scanning stderr, so you do **not** need a patched vitaly for reliable success/error feedback. Use any official or prebuilt `vitaly` on your `PATH` if you prefer not to compile the copy under `Reference only/`.
+
 ## Tips
 - If a symbol isn’t translating as desired, enter the exact QMK keycode expression in `alpha_layers.json`; it will be used verbatim.
 - `_row2`/`_row3` are just visual separators for editing convenience.
+- **Tap dance in Vial JSON** must be `TD(0)`, `TD(1)`, … (slot index). In `alpha_layers.json` you can write `TD(H_GUIH)` if `tapDanceOverrides` has `"name": "H_GUIH"` — the generator rewrites it to the correct index before writing to the keyboard.
 

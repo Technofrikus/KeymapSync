@@ -4,15 +4,79 @@
   "description": "Electron GUI for KeymapSync (Vial keymap generator)",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "node scripts/fetch-vitaly.js --win && electron-builder --win --x64",
+    "prebuild": "cp ../generate_vial_keymaps.js .",
+    "rebuild": "electron-builder install-app-deps",
+    "fetch-vitaly": "node scripts/fetch-vitaly.js",
+    "fetch-vitaly:win": "node scripts/fetch-vitaly.js --win",
+    "fetch-vitaly:all": "node scripts/fetch-vitaly.js --all"
+  },
+  "build": {
+    "appId": "com.keymapsync.gui",
+    "productName": "KeymapSync",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "styles.css",
+      "vial-fetch-definition.js",
+      "kle-layout.js",
+      "generate_vial_keymaps.js",
+      "package.json"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/node-hid/**",
+      "**/node_modules/lzma-native/**"
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.utilities",
+      "extraResources": [
+        {
+          "from": "bin/vitaly",
+          "to": "bin/vitaly"
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "extraResources": [
+        {
+          "from": "bin/vitaly.exe",
+          "to": "bin/vitaly.exe"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "differentialPackage": false
+    }
   },
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "electron": "^35.7.5"
+    "lzma": "^2.3.2",
+    "node-hid": "^3.3.0",
+    "xz-decompress": "^0.2.3"
   },
   "devDependencies": {
+    "electron": "^35.7.5",
+    "electron-builder": "^26.8.1",
     "electron-reload": "^2.0.0-alpha.1"
   }
 }
-

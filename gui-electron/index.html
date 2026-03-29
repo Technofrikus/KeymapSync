@@ -12,15 +12,21 @@
         <h1>KeymapSync</h1>
         <span class="subtitle">Sync your Vial layers</span>
       </div>
+      <nav class="view-nav">
+        <button id="viewKeymapBtn" class="nav-btn active">Keymap</button>
+        <button id="viewOfflineBtn" class="nav-btn">Offline Sync</button>
+        <button id="viewOnlineBtn" class="nav-btn">Online Sync</button>
+      </nav>
       <div class="top-actions">
         <button id="saveBtn" class="primary" title="Save configuration file">Save</button>
-        <button id="syncBtn" class="primary" title="Generate and sync Vial keymap files">Sync</button>
         <button id="settingsBtn" title="Settings & Logs">⚙</button>
       </div>
     </header>
 
     <main class="layout">
-      <section id="gridView" class="view visible">
+      <!-- Keymap Editor View (formerly gridView) -->
+      <!-- Keymap Editor View -->
+      <section id="keymapView" class="view visible">
         <div class="grid-header">
           <div class="status">
             <span id="runStatus"></span>
@@ -31,9 +37,9 @@
               <option value="qwerty">QWERTY</option>
               <option value="dvorak">Dvorak</option>
               <option value="colemak">Colemak</option>
-              <option value="alphabetical">Alphabetisch</option>
+              <option value="alphabetical">Alphabetical</option>
             </select>
-            <button id="toggleHelp" class="help-toggle" title="Hilfe ein/ausblenden">▾ Hilfe</button>
+            <button id="toggleHelp" class="help-toggle" title="Show/Hide Help">▾ Help</button>
           </div>
         </div>
         <div class="grid-and-help" id="gridAndHelp">
@@ -212,9 +218,110 @@
         </div>
       </section>
 
+      <!-- Offline Sync View -->
+      <section id="offlineView" class="view">
+        <div class="view-header">
+          <h2>Offline Sync</h2>
+          <p class="description">Generate updated .vil files from your original layouts.</p>
+        </div>
+        
+        <div class="sync-card">
+          <div class="path-summary">
+            <div class="path-item">
+              <span class="label">Originals:</span>
+              <span id="offlineInputPath" class="value"></span>
+            </div>
+            <div class="path-item">
+              <span class="label">Output:</span>
+              <span id="offlineOutputPath" class="value"></span>
+            </div>
+          </div>
+          
+          <div class="sync-actions">
+            <button id="runOfflineSyncBtn" class="primary big-btn">Generate .vil files</button>
+          </div>
+          
+          <div id="offlineStatus" class="sync-status"></div>
+        </div>
+      </section>
+
+      <!-- Online Sync View -->
+      <section id="onlineView" class="view">
+        <div class="view-header">
+          <h2>Online Sync</h2>
+          <p class="description">Sync your configuration directly to a connected keyboard.</p>
+        </div>
+
+        <div class="device-selection">
+          <div class="section-header">
+            <h3>Connected Keyboards</h3>
+            <button id="refreshDevicesBtn" class="secondary-btn">Refresh</button>
+          </div>
+          <div id="deviceList" class="device-list">
+            <div class="empty-state">No keyboards found. Make sure your keyboard supports Vial and is connected.</div>
+          </div>
+        </div>
+
+        <div id="onlineSyncPanel" class="sync-panel hidden">
+          <div class="selected-device-info">
+            <h3 id="selectedDeviceName">Keyboard Name</h3>
+            <div id="deviceCapabilities" class="capabilities-tags"></div>
+          </div>
+
+          <div id="layoutVisualization" class="layout-visualization hidden">
+            <h3>Current Layout (Layer 0)</h3>
+            <div id="layoutGrid" class="layout-grid"></div>
+          </div>
+
+          <div class="sync-options-card">
+            <h3>Sync Options</h3>
+            <div class="option-group">
+              <label class="checkbox-container">
+                <input type="checkbox" id="syncBaseKeys" checked>
+                <span class="checkmark"></span>
+                Apply Base & Layer Keys
+              </label>
+              <p class="option-desc">Updates the alpha keys and their symbol/number layers.</p>
+            </div>
+            
+            <div class="option-group" id="comboOptionGroup">
+              <label class="checkbox-container">
+                <input type="checkbox" id="syncCombos" checked>
+                <span class="checkmark"></span>
+                Apply Combos
+              </label>
+              <p class="option-desc">Syncs your defined combos to the device.</p>
+            </div>
+
+            <div class="option-group" id="tapDanceOptionGroup">
+              <label class="checkbox-container">
+                <input type="checkbox" id="syncTapDance" checked>
+                <span class="checkmark"></span>
+                Apply TapDance
+              </label>
+              <p class="option-desc">Syncs your tap-dance definitions. Note: Vial has fixed TD slots.</p>
+            </div>
+
+          <div class="sync-actions">
+            <button id="previewOnlineSyncBtn" class="primary big-btn">Preview Changes</button>
+            <button id="downloadBackupBtn" class="secondary-btn">Download Current Config (.vil)</button>
+            <button id="runOnlineSyncBtn" class="primary big-btn hidden">Apply to Keyboard</button>
+          </div>
+          </div>
+
+          <div id="syncPreview" class="sync-preview hidden">
+            <h3>Preview Changes</h3>
+            <div id="previewDiff" class="diff-container"></div>
+            <div id="previewLayouts" class="preview-layouts"></div>
+          </div>
+          
+          <div id="onlineStatus" class="sync-status"></div>
+        </div>
+      </section>
+
       <section id="drawer" class="drawer">
         <div class="drawer-header">
-          <h2>Einstellungen & Logs</h2>
+          <h2>Settings & Logs</h2>
           <button id="closeDrawer">✕</button>
         </div>
         <div class="field">
@@ -254,6 +361,9 @@
     </main>
 
     <script src="./keycode-mapping.js"></script>
+    <script src="./kle-parser.js"></script>
+    <script src="./kle-layout.js"></script>
+    <script src="./kle-rect-union.js"></script>
     <script src="./renderer.js"></script>
   </body>
 </html>

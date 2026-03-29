@@ -1,1 +1,7 @@
 .DS_Store
+node_modules/
+dist/
+gui-electron/dist/
+gui-electron/bin/
+output/
+Reference only/vitaly-main/target/
