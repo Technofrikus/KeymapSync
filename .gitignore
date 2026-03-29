@@ -1,5 +1,6 @@
 .DS_Store
 node_modules/
+gui-electron/node_modules/
 dist/
 gui-electron/dist/
 gui-electron/bin/
