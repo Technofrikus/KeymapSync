@@ -10,6 +10,9 @@ on:
       - "alpha_layers.json"
       - ".github/workflows/gui-electron-release.yml"
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build-macos:
     name: Build macOS (signed + notarized)
@@ -46,7 +49,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: KeymapSync-macos
-          path: gui-electron/dist/*
+          path: |
+            gui-electron/dist/*.dmg
+            gui-electron/dist/*.zip
+            gui-electron/dist/*.blockmap
+            gui-electron/dist/latest-mac.yml
 
   build-windows:
     name: Build Windows (unsigned)
@@ -76,7 +83,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: KeymapSync-windows
-          path: gui-electron/dist/*
+          path: |
+            gui-electron/dist/*.exe
+            gui-electron/dist/*.zip
+            gui-electron/dist/*.blockmap
+            gui-electron/dist/latest*.yml
 
   release:
     name: Publish GitHub Release Assets
@@ -102,5 +113,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release-assets/macos/**
-            release-assets/windows/**
+            release-assets/macos/*.dmg
+            release-assets/macos/*.zip
+            release-assets/macos/*.blockmap
+            release-assets/macos/latest-mac.yml
+            release-assets/windows/*.exe
+            release-assets/windows/*.zip
+            release-assets/windows/*.blockmap
+            release-assets/windows/latest*.yml
