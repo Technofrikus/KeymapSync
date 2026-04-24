@@ -121,18 +121,32 @@ jobs:
           RES_DIR="${APP_DIR}/resources"
           test -d "${RES_DIR}"
           test -f "${RES_DIR}/app.asar"
-          VITALY_PATH="$(rg --files "${RES_DIR}" | rg 'vitaly(\.exe)?$' | head -n1 || true)"
-          if [[ -z "${VITALY_PATH}" ]]; then
-            echo "Could not find vitaly in Windows resources directory."
-            echo "Known files under ${RES_DIR}:"
-            rg --files "${RES_DIR}" || true
-            exit 1
-          fi
-          echo "Found bundled vitaly at: ${VITALY_PATH}"
-          ASAR_PATH="${RES_DIR}/app.asar" node - <<'NODE'
+          RES_DIR="${RES_DIR}" ASAR_PATH="${RES_DIR}/app.asar" node - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
           const { execFileSync } = require('child_process');
-          const asarPath = process.env.ASAR_PATH;
+          const resourcesDir = process.env.RES_DIR;
           const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+          const asarPath = process.env.ASAR_PATH;
+
+          function walk(dir, out = []) {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) walk(full, out);
+              else out.push(full);
+            }
+            return out;
+          }
+
+          const files = walk(resourcesDir);
+          const vitalyPath = files.find((p) => /(^|[\\/])vitaly(\.exe)?$/i.test(p));
+          if (!vitalyPath) {
+            throw new Error(
+              `Could not find vitaly in ${resourcesDir}. Files discovered: ${files.join(', ')}`
+            );
+          }
+          console.log(`Found bundled vitaly at: ${vitalyPath}`);
+
           const out = execFileSync(npxCmd, ['asar', 'list', asarPath], { encoding: 'utf8' });
           const mustContain = ['kle-parser.js', 'keycode-mapping.js', 'kle-rect-union.js', 'renderer.js'];
           const missing = mustContain.filter((f) => !out.includes(f));
