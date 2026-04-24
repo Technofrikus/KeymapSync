@@ -118,9 +118,18 @@ jobs:
         run: |
           set -euo pipefail
           APP_DIR="dist/win-unpacked"
-          test -f "${APP_DIR}/resources/bin/vitaly.exe"
-          test -f "${APP_DIR}/resources/app.asar"
-          ASAR_PATH="${APP_DIR}/resources/app.asar" node - <<'NODE'
+          RES_DIR="${APP_DIR}/resources"
+          test -d "${RES_DIR}"
+          test -f "${RES_DIR}/app.asar"
+          VITALY_PATH="$(rg --files "${RES_DIR}" | rg 'vitaly(\.exe)?$' | head -n1 || true)"
+          if [[ -z "${VITALY_PATH}" ]]; then
+            echo "Could not find vitaly in Windows resources directory."
+            echo "Known files under ${RES_DIR}:"
+            rg --files "${RES_DIR}" || true
+            exit 1
+          fi
+          echo "Found bundled vitaly at: ${VITALY_PATH}"
+          ASAR_PATH="${RES_DIR}/app.asar" node - <<'NODE'
           const { execFileSync } = require('child_process');
           const asarPath = process.env.ASAR_PATH;
           const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
