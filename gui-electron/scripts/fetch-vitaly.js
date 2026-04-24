@@ -66,9 +66,21 @@ async function download(url, dest) {
         download(response.headers.location, dest).then(resolve).catch(reject);
         return;
       }
+      if ((response.statusCode || 0) >= 400) {
+        fs.unlink(dest, () => {});
+        reject(new Error(`Failed to download ${url}: HTTP ${response.statusCode}`));
+        return;
+      }
       response.pipe(file);
       file.on('finish', () => {
-        file.close(resolve);
+        // Wait until the descriptor is fully closed to avoid Windows file locks.
+        file.close((err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve();
+        });
       });
     }).on('error', (err) => {
       fs.unlink(dest, () => {});
@@ -143,4 +155,7 @@ async function main() {
   }
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  console.error(err);
+  process.exitCode = 1;
+});
