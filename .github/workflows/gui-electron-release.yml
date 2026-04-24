@@ -51,6 +51,25 @@ jobs:
           node scripts/fetch-vitaly.js
           npx electron-builder --mac --publish never --config.extraMetadata.version="${BUILD_VERSION}"
 
+      - name: Smoke check macOS bundle contents
+        working-directory: gui-electron
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_DIR="$(ls -d dist/mac*/KeymapSync.app | head -n1)"
+          test -f "${APP_DIR}/Contents/Resources/bin/vitaly"
+          test -f "${APP_DIR}/Contents/Resources/app.asar"
+          ASAR_PATH="${APP_DIR}/Contents/Resources/app.asar" node - <<'NODE'
+          const { execFileSync } = require('child_process');
+          const asarPath = process.env.ASAR_PATH;
+          const out = execFileSync('npx', ['asar', 'list', asarPath], { encoding: 'utf8' });
+          const mustContain = ['kle-parser.js', 'keycode-mapping.js', 'kle-rect-union.js', 'renderer.js'];
+          const missing = mustContain.filter((f) => !out.includes(f));
+          if (missing.length) {
+            throw new Error(`Missing files in macOS app.asar: ${missing.join(', ')}`);
+          }
+          NODE
+
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v5
         with:
@@ -92,6 +111,26 @@ jobs:
           fi
           node scripts/fetch-vitaly.js --win
           npx electron-builder --win --x64 --publish never --config.extraMetadata.version="${BUILD_VERSION}"
+
+      - name: Smoke check Windows bundle contents
+        working-directory: gui-electron
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_DIR="dist/win-unpacked"
+          test -f "${APP_DIR}/resources/bin/vitaly.exe"
+          test -f "${APP_DIR}/resources/app.asar"
+          ASAR_PATH="${APP_DIR}/resources/app.asar" node - <<'NODE'
+          const { execFileSync } = require('child_process');
+          const asarPath = process.env.ASAR_PATH;
+          const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+          const out = execFileSync(npxCmd, ['asar', 'list', asarPath], { encoding: 'utf8' });
+          const mustContain = ['kle-parser.js', 'keycode-mapping.js', 'kle-rect-union.js', 'renderer.js'];
+          const missing = mustContain.filter((f) => !out.includes(f));
+          if (missing.length) {
+            throw new Error(`Missing files in Windows app.asar: ${missing.join(', ')}`);
+          }
+          NODE
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v5
