@@ -19,10 +19,10 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
@@ -43,10 +43,16 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          npm run dist:mac
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            BUILD_VERSION="${GITHUB_REF_NAME#v}"
+          else
+            BUILD_VERSION="$(node -p "require('./package.json').version")"
+          fi
+          node scripts/fetch-vitaly.js
+          npx electron-builder --mac --publish never --config.extraMetadata.version="${BUILD_VERSION}"
 
       - name: Upload macOS artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: KeymapSync-macos
           path: |
@@ -60,10 +66,10 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
@@ -75,12 +81,20 @@ jobs:
 
       - name: Build unsigned Windows artifacts
         working-directory: gui-electron
+        shell: bash
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: npm run dist:win
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            BUILD_VERSION="${GITHUB_REF_NAME#v}"
+          else
+            BUILD_VERSION="$(node -p "require('./package.json').version")"
+          fi
+          node scripts/fetch-vitaly.js --win
+          npx electron-builder --win --x64 --publish never --config.extraMetadata.version="${BUILD_VERSION}"
 
       - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: KeymapSync-windows
           path: |
@@ -98,13 +112,13 @@ jobs:
       contents: write
     steps:
       - name: Download macOS artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: KeymapSync-macos
           path: release-assets/macos
 
       - name: Download Windows artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: KeymapSync-windows
           path: release-assets/windows

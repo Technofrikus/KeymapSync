@@ -126,6 +126,18 @@ function isBundledVitalyRunnableOnThisOS(refPath) {
 }
 
 // Helper to run vitaly commands
+function resolveBundledVitalyPath(vitalyName) {
+  const candidates = [
+    // Expected location from electron-builder extraResources.
+    path.join(process.resourcesPath, 'bin', vitalyName),
+    // Defensive fallback in case extraResources destination changes.
+    path.join(process.resourcesPath, vitalyName),
+    // Defensive fallback for uncommon bundle layouts.
+    path.join(process.resourcesPath, 'app.asar.unpacked', 'bin', vitalyName)
+  ];
+  return candidates.find((p) => fs.existsSync(p)) || candidates[0];
+}
+
 async function runVitaly(args) {
   let vitalyPath;
   if (isDev) {
@@ -143,8 +155,8 @@ async function runVitaly(args) {
       vitalyPath = defaultPaths.vitaly;
     }
   } else {
-    // In production, vitaly should be in the app's resources/bin (from extraResources)
-    vitalyPath = path.join(process.resourcesPath, 'bin', defaultPaths.vitaly);
+    // In production, vitaly is bundled via extraResources.
+    vitalyPath = resolveBundledVitalyPath(defaultPaths.vitaly);
   }
   
   return new Promise((resolve, reject) => {
@@ -169,6 +181,18 @@ async function runVitaly(args) {
     });
     
     child.on('error', (err) => {
+      if (!isDev && err?.code === 'ENOENT') {
+        const inspected = [
+          path.join(process.resourcesPath, 'bin', defaultPaths.vitaly),
+          path.join(process.resourcesPath, defaultPaths.vitaly),
+          path.join(process.resourcesPath, 'app.asar.unpacked', 'bin', defaultPaths.vitaly)
+        ];
+        const status = inspected
+          .map((p) => `${p} [${fs.existsSync(p) ? 'exists' : 'missing'}]`)
+          .join('; ');
+        reject(new Error(`Failed to start vitaly (${vitalyPath}): ${err.message}. Checked: ${status}`));
+        return;
+      }
       reject(new Error(`Failed to start vitaly (${vitalyPath}): ${err.message}`));
     });
   });

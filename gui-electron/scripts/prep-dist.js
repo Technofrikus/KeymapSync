@@ -23,6 +23,16 @@ function main() {
   execFileSync(process.execPath, [path.join(guiRoot, 'scripts', 'fetch-vitaly.js')], {
     stdio: 'inherit'
   });
+
+  const vitalyName = process.platform === 'win32' ? 'vitaly.exe' : 'vitaly';
+  const vitalyPath = path.join(guiRoot, 'bin', vitalyName);
+  if (!fs.existsSync(vitalyPath)) {
+    throw new Error(`Required vitaly binary missing after fetch: ${vitalyPath}`);
+  }
+  if (process.platform !== 'win32') {
+    // Ensure executable bit is present before packaging.
+    fs.chmodSync(vitalyPath, 0o755);
+  }
 }
 
 main();
