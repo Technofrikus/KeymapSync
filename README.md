@@ -94,3 +94,62 @@ Build from source on the same OS you run Electron (Rust toolchain required for t
 
 - If a character does not translate as expected, put the exact QMK expression in the JSON; it wins over the language tables.
 - Combo / tap-dance / key-override shapes must stay compatible with your firmware’s Vial feature limits.
+
+## Release and Distribution Pipeline (GitHub Actions)
+
+This repository uses a tag-triggered GitHub Actions workflow to build desktop artifacts for macOS and Windows.
+
+### 1) One-time setup (GitHub secrets)
+
+In your GitHub repository, add these secrets before creating a signed macOS release:
+
+- `APPLE_CERT_P12_BASE64` - Base64-encoded Developer ID Application certificate (`.p12`)
+- `APPLE_CERT_PASSWORD` - Password used when exporting the `.p12`
+- `APPLE_ID` - Your Apple ID email
+- `APPLE_APP_SPECIFIC_PASSWORD` - App-specific password from Apple ID settings
+- `APPLE_TEAM_ID` - Apple Developer Team ID
+
+Windows signing is optional. If you do not configure Windows signing, CI can still produce unsigned `.exe`/installer artifacts.
+
+### 2) Create a release tag
+
+Create and push a semantic version tag (for example `v0.2.0`) from your local repo:
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+This tag push triggers the workflow in `.github/workflows/gui-electron-release.yml`.
+
+### 3) What the workflow does
+
+- **macOS runner (`macos-latest`)**
+  - Installs dependencies in `gui-electron/`
+  - Runs `npm run dist:mac`
+  - Signs the app with your Developer ID certificate
+  - Submits for notarization and staples the ticket (when Apple credentials are configured)
+  - Uploads macOS artifacts (`dmg`, `zip`)
+
+- **Windows runner (`windows-latest`)**
+  - Installs dependencies in `gui-electron/`
+  - Runs `npm run dist:win`
+  - Builds native Windows artifacts on Windows (required for native modules such as `node-hid`)
+  - Uploads Windows artifacts (`nsis`, `zip`)
+
+- **Release job (`ubuntu-latest`, tags only)**
+  - Downloads both artifact bundles
+  - Creates/updates the GitHub Release for the tag
+  - Attaches macOS and Windows files to that release
+
+### 4) Download artifacts / release files
+
+After the workflow finishes:
+
+1. Open the workflow run in GitHub Actions.
+2. Download uploaded artifacts directly, or open the tag's GitHub Release.
+3. Share the generated installers/archives from the release assets.
+
+### 5) Why Windows is built on GitHub (not on macOS)
+
+Cross-compiling Electron apps with native Node modules from macOS to Windows is unreliable and often unsupported by `node-gyp`. The recommended approach is exactly what this pipeline does: build each platform on its native GitHub-hosted runner.

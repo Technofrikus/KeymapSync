@@ -32,19 +32,66 @@ if (isDev) {
   }
 }
 
-// In packaged app, __dirname is inside asar or resources
-// In development, it's gui-electron/
-const projectRoot = isDev 
-  ? path.resolve(__dirname, '..') 
-  : path.join(process.resourcesPath, 'app'); // Standard electron-builder path for extra files
+// In development, project files live one level above `gui-electron/`.
+// In production, we cannot rely on repo-relative files existing next to the app bundle,
+// so defaults live in the user's data directory, seeded from bundled assets on first run.
+const repoRoot = path.resolve(__dirname, '..');
+const userDataRoot = app.getPath('userData');
 
-const defaultPaths = {
-  config: path.join(projectRoot, 'alpha_layers.json'),
-  input: path.join(projectRoot, 'original'),
-  output: path.join(projectRoot, 'output'),
-  script: path.join(__dirname, 'generate_vial_keymaps.js'),
-  vitaly: process.platform === 'win32' ? 'vitaly.exe' : 'vitaly'
-};
+const defaultPaths = (() => {
+  const vitaly = process.platform === 'win32' ? 'vitaly.exe' : 'vitaly';
+
+  if (isDev) {
+    return {
+      config: path.join(repoRoot, 'alpha_layers.json'),
+      input: path.join(repoRoot, 'original'),
+      output: path.join(repoRoot, 'output'),
+      script: path.join(__dirname, 'generate_vial_keymaps.js'),
+      vitaly
+    };
+  }
+
+  // Keep all user-modifiable files out of the app bundle.
+  const appDataDir = path.join(userDataRoot, 'KeymapSync');
+  return {
+    config: path.join(appDataDir, 'alpha_layers.json'),
+    input: path.join(appDataDir, 'original'),
+    output: path.join(appDataDir, 'output'),
+    script: path.join(__dirname, 'generate_vial_keymaps.js'),
+    vitaly
+  };
+})();
+
+function ensureDir(dir) {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
+
+function ensureSeedConfig() {
+  if (isDev) return;
+
+  const targetDir = path.dirname(defaultPaths.config);
+  ensureDir(targetDir);
+
+  if (fs.existsSync(defaultPaths.config)) return;
+
+  // `alpha_layers.json` is bundled into the app (copied in `predist`).
+  const bundled = path.join(__dirname, 'alpha_layers.json');
+  if (!fs.existsSync(bundled)) {
+    throw new Error(
+      `Bundled default config missing (${bundled}). Build is misconfigured (alpha_layers.json not packaged).`
+    );
+  }
+  fs.copyFileSync(bundled, defaultPaths.config);
+}
+
+function ensureDefaultFolders() {
+  if (isDev) return;
+  ensureDir(defaultPaths.input);
+  ensureDir(defaultPaths.output);
+}
+
+ensureSeedConfig();
+ensureDefaultFolders();
 
 /** First bytes of the executable — avoid using a Linux ELF from Docker builds on macOS/Windows (spawn error -8). */
 function peekExecutableKind(filePath) {
@@ -85,7 +132,7 @@ async function runVitaly(args) {
     // 1. Prefer locally fetched vitaly in gui-electron/bin/
     const localBinPath = path.join(__dirname, 'bin', defaultPaths.vitaly);
     // 2. Fallback to Reference only/ (if manually built)
-    const refPath = path.join(projectRoot, 'Reference only', 'vitaly-main', 'target', 'release', defaultPaths.vitaly);
+    const refPath = path.join(repoRoot, 'Reference only', 'vitaly-main', 'target', 'release', defaultPaths.vitaly);
     
     if (fs.existsSync(localBinPath) && isBundledVitalyRunnableOnThisOS(localBinPath)) {
       vitalyPath = localBinPath;

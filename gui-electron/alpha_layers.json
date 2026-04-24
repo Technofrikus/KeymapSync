@@ -36,13 +36,13 @@
     },
     "T": {
       "layer1": "NO",
-      "layer2": "%",
+      "layer2": "$",
       "base": null,
       "aliases": []
     },
     "Y": {
       "layer1": "NO",
-      "layer2": "$",
+      "layer2": "\"",
       "base": null,
       "aliases": []
     },
@@ -108,7 +108,7 @@
     },
     "H": {
       "layer1": "6",
-      "layer2": "\"",
+      "layer2": "%",
       "base": "TD(H_GUIH)",
       "aliases": [
         "TD(H_GUIH)"
@@ -214,20 +214,6 @@
         "KC_L"
       ],
       "result": "LALT(KC_BSPC)"
-    },
-    {
-      "keys": [
-        "KC_K",
-        "KC_L"
-      ],
-      "result": "KC_DEL"
-    },
-    {
-      "keys": [
-        "KC_7",
-        "KC_8"
-      ],
-      "result": "KC_BSPC"
     }
   ],
   "tapDanceOverrides": [
