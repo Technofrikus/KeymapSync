@@ -60,7 +60,6 @@ function stageBinaryIntoBinDir(binDir, binaryName) {
 
 async function download(url, dest) {
   return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(dest);
     https.get(url, (response) => {
       if (response.statusCode === 302 || response.statusCode === 301) {
         download(response.headers.location, dest).then(resolve).catch(reject);
@@ -71,6 +70,7 @@ async function download(url, dest) {
         reject(new Error(`Failed to download ${url}: HTTP ${response.statusCode}`));
         return;
       }
+      const file = fs.createWriteStream(dest);
       response.pipe(file);
       file.on('finish', () => {
         // Wait until the descriptor is fully closed to avoid Windows file locks.
