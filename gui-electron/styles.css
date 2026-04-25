@@ -484,6 +484,10 @@ body {
   justify-content: center;
 }
 
+.kle-board-svg {
+  display: block;
+}
+
 /* Grid cell for stepped keys: clip-path is applied on .kle-key-clip */
 .kle-key-slot {
   box-sizing: border-box;
@@ -526,10 +530,45 @@ body {
   stroke-width: 1;
 }
 
-.kle-key-slot.kle-stepped.changed .kle-key-path {
+.kle-key-path.changed {
   stroke: #22c55e;
   stroke-width: 2;
   fill: rgba(34, 197, 94, 0.12);
+}
+
+.kle-key-text {
+  fill: #e5e7eb;
+  font-size: 11px;
+  font-family: 'Inter', sans-serif;
+  pointer-events: none;
+}
+
+.kle-key-text.transparent-key {
+  fill: #64748b;
+  font-size: 12px;
+}
+
+.kle-key-text.changed {
+  fill: #4ade80;
+  font-weight: 700;
+  font-size: 9px;
+}
+
+.kle-key-text .old-label {
+  fill: #f87171;
+  text-decoration: line-through;
+  opacity: 0.8;
+  font-weight: 400;
+}
+
+.kle-key-text .new-label {
+  fill: #4ade80;
+  font-weight: 700;
+}
+
+.kle-key-text .arrow {
+  fill: #94a3b8;
+  font-weight: 600;
 }
 
 .kle-key-face-overlay {

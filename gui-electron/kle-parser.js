@@ -26,24 +26,36 @@
     return ret;
   }
 
-  function parseKeyLabels(key) {
-    if (key.labels[4] === 'e') {
-      if (key.labels[0] && key.labels[0].includes(',')) {
-        const parts = key.labels[0].split(',');
-        key.encoderIdx = parseInt(parts[0], 10);
-        key.encoderDir = parseInt(parts[1], 10);
+  function parsePairLabel(value) {
+    if (!value || !String(value).includes(',')) return null;
+    const parts = String(value).split(',');
+    if (parts.length < 2) return null;
+    const a = parseInt(parts[0], 10);
+    const b = parseInt(parts[1], 10);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+    return { a, b };
+  }
+
+  function parseKeyLabels(key, rawLabels) {
+    const isEncoder = rawLabels[4] === 'e' || key.labels[4] === 'e';
+    const matrixPair = parsePairLabel(rawLabels[0]) || parsePairLabel(key.labels[0]);
+    if (isEncoder) {
+      if (matrixPair) {
+        key.encoderIdx = matrixPair.a;
+        key.encoderDir = matrixPair.b;
       }
-    } else if (key.decal || (key.labels[0] && key.labels[0].includes(','))) {
-      if (key.labels[0] && key.labels[0].includes(',')) {
-        const parts = key.labels[0].split(',');
-        key.row = parseInt(parts[0], 10);
-        key.col = parseInt(parts[1], 10);
+    } else if (key.decal || matrixPair) {
+      if (matrixPair) {
+        key.row = matrixPair.a;
+        key.col = matrixPair.b;
       }
     }
-    if (key.labels[8] && key.labels[8].includes(',')) {
-      const parts = key.labels[8].split(',');
-      key.layoutIndex = parseInt(parts[0], 10);
-      key.layoutOption = parseInt(parts[1], 10);
+
+    // Prefer raw slot 8 (Vial convention), but accept reordered slot 8 if needed.
+    const layoutPair = parsePairLabel(rawLabels[8]) || parsePairLabel(key.labels[8]);
+    if (layoutPair) {
+      key.layoutIndex = layoutPair.a;
+      key.layoutOption = layoutPair.b;
     }
   }
 
@@ -83,7 +95,8 @@
           const width2 = currentWidth2 === 0 ? currentWidth : currentWidth2;
           const height2 = currentHeight2 === 0 ? currentHeight : currentHeight2;
 
-          const labels = reorderLabels(item.split('\n'), align);
+          const rawLabels = item.split('\n');
+          const labels = reorderLabels(rawLabels, align);
           const textSize = reorderLabels(currentTextSize, align);
 
           const cleanTextColor = [...currentTextColor];
@@ -125,7 +138,7 @@
             ghost: currentGhost,
           };
 
-          parseKeyLabels(newKey);
+          parseKeyLabels(newKey, rawLabels);
           keys.push(newKey);
 
           currentX += currentWidth;

@@ -166,7 +166,7 @@ function escapeHtml(s) {
 
 /** Same as pipette DisplayKeyboard: 1u = 4 grid cells; each cell is KLE_CELL_PX wide/tall */
 const KLE_GRID_SCALE = 4;
-const KLE_CELL_PX = 8;
+const KLE_CELL_PX = 8 * 1.4;
 
 /** KLE bounding box for stepped keys (grid placement). */
 function computeSteppedKeyInfo(w, h, x2, y2, w2, h2) {
@@ -265,11 +265,10 @@ function isTransparentKeycode(v) {
 }
 
 /**
- * Bit-packed layout options from the connected keyboard (HID) are authoritative for which KLE
- * variant (split space, thumbs, etc.) is active. Vitaly save JSON may be stale or use -1 — prefer HID.
+ * Resolve packed layout options (VIA/Vial bitfield) used for KLE variant selection.
+ * Prefer `vitaly save` JSON when valid, and fall back to HID-read options.
  */
 function resolvePackedLayoutOptions(deviceState, hidPacked) {
-  if (typeof hidPacked === 'number' && hidPacked >= 0) return hidPacked >>> 0;
   const raw =
     deviceState &&
     (typeof deviceState.layout_options === 'number'
@@ -277,7 +276,10 @@ function resolvePackedLayoutOptions(deviceState, hidPacked) {
       : typeof deviceState.layoutOptions === 'number'
         ? deviceState.layoutOptions
         : NaN);
+  // In practice, some boards report 0 via VIA_LAYOUT_OPTIONS even when a non-default
+  // layout is active. Prefer the value from `vitaly save` when it is present and valid.
   if (Number.isFinite(raw) && raw >= 0) return raw >>> 0;
+  if (typeof hidPacked === 'number' && hidPacked >= 0) return hidPacked >>> 0;
   return 0;
 }
 
@@ -287,6 +289,51 @@ function countKleNonDecalKeys(keys) {
     return l0 != null && String(l0).includes(',');
   };
   return keys.filter((key) => !key.decal || hasMatrixPos(key)).length;
+}
+
+function deriveActiveKleGeometry(definition, packedLayoutOptions) {
+  if (!definition || !definition.layouts || !definition.layouts.keymap) {
+    return null;
+  }
+  const labels = definition.layouts.labels || [];
+  const rawKleKeys = parseKle(definition.layouts.keymap).keys;
+  const decodedLayoutOptions = decodeLayoutOptions(packedLayoutOptions, labels);
+  const layoutOptionsMap =
+    decodedLayoutOptions.size > 0 ? decodedLayoutOptions : buildLayoutOptionsDefaultMap(rawKleKeys);
+
+  let visibleKeys = repositionLayoutKeys(rawKleKeys, layoutOptionsMap);
+  visibleKeys = filterVisibleKeys(visibleKeys, layoutOptionsMap);
+
+  let effectiveLayoutOptions = layoutOptionsMap;
+  const rawNd = countKleNonDecalKeys(rawKleKeys);
+  const visNd = countKleNonDecalKeys(visibleKeys);
+  let fallbackApplied = false;
+  const minVisibleThreshold = Math.max(12, rawNd * 0.42);
+  if (
+    decodedLayoutOptions.size === 0 &&
+    rawNd >= 16 &&
+    visNd < minVisibleThreshold
+  ) {
+    console.warn(`[KLE] Layout looks broken (visible=${visNd}, total=${rawNd}). Falling back to layout option 0 per group.`);
+    effectiveLayoutOptions = buildLayoutOptionsDefaultMap(rawKleKeys);
+    visibleKeys = repositionLayoutKeys(rawKleKeys, effectiveLayoutOptions);
+    visibleKeys = filterVisibleKeys(visibleKeys, effectiveLayoutOptions);
+    fallbackApplied = true;
+  }
+
+  const summary =
+    formatLayoutOptionsSummary(labels, decodedLayoutOptions.size ? decodedLayoutOptions : effectiveLayoutOptions) ||
+    (decodedLayoutOptions.size === 0 && Number.isFinite(packedLayoutOptions) ? `raw ${packedLayoutOptions}` : '');
+
+  return {
+    keys: visibleKeys,
+    labels,
+    decodedLayoutOptions,
+    layoutOptionsMap: effectiveLayoutOptions,
+    packedLayoutOptions,
+    summary,
+    fallbackApplied,
+  };
 }
 
 /**
@@ -306,6 +353,29 @@ function getKeycodeAt(state, layerIdx, row, col) {
   if (!layer) return null;
   if (!layer[row]) return null;
   return getMatrixCell(layer[row], col);
+}
+
+function formatLayoutOptionsDebug(labels, packed, decodedMap, effectiveMap) {
+  const mapToString = (m) => {
+    if (!m || m.size === 0) return '[]';
+    return `[${Array.from(m.entries()).map(([k, v]) => `${k}:${v}`).join(', ')}]`;
+  };
+  const picked = [];
+  if (labels && labels.length && effectiveMap && effectiveMap.size) {
+    for (let i = 0; i < labels.length; i++) {
+      const sel = effectiveMap.get(i);
+      if (sel === undefined) continue;
+      const label = labels[i];
+      if (typeof label === 'string') {
+        picked.push(`${label}=${sel ? 'On' : 'Off'}`);
+      } else if (Array.isArray(label)) {
+        const title = label[0] || `opt${i}`;
+        const choice = label[sel + 1] != null ? label[sel + 1] : `#${sel}`;
+        picked.push(`${title}=${choice}(${sel})`);
+      }
+    }
+  }
+  return `packed=${packed} decoded=${mapToString(decodedMap)} effective=${mapToString(effectiveMap)} labels=${picked.join(' | ') || '-'}`;
 }
 
 async function refreshDevices() {
@@ -404,43 +474,27 @@ async function selectDevice(device, cardEl) {
         : { ok: false, error: 'fetchKeyboardDefinition not available (reload app after update)' };
 
     if (defRes && defRes.ok && defRes.definition && defRes.definition.layouts && defRes.definition.layouts.keymap) {
-      const labels = defRes.definition.layouts.labels || [];
       const packed = resolvePackedLayoutOptions(currentDeviceState, defRes.layoutOptionsPacked);
-      const decodedLayoutOptions = decodeLayoutOptions(packed, labels);
-      const rawKleKeys = parseKle(defRes.definition.layouts.keymap).keys;
-      // Empty decode + empty Map skips filtering and shows every layoutOption at once (exploded).
-      let layoutOptionsMap =
-        decodedLayoutOptions.size > 0 ? decodedLayoutOptions : buildLayoutOptionsDefaultMap(rawKleKeys);
-      let kleKeys = repositionLayoutKeys(rawKleKeys, layoutOptionsMap);
-      kleKeys = filterVisibleKeys(kleKeys, layoutOptionsMap);
-      let effectiveLayoutOptions = layoutOptionsMap;
-      const rawNd = countKleNonDecalKeys(rawKleKeys);
-      const visNd = countKleNonDecalKeys(kleKeys);
-      let kleLayoutRelaxed = false;
-      // Only override when we could not decode any bits from labels (stale JSON, missing labels).
-      // If HID gave a valid decode, do not reset to option 0 — that can hide thumb/space variants.
-      if (
-        decodedLayoutOptions.size === 0 &&
-        rawNd >= 16 &&
-        visNd < Math.max(12, rawNd * 0.42)
-      ) {
-        const fallbackMap = buildLayoutOptionsDefaultMap(rawKleKeys);
-        kleKeys = repositionLayoutKeys(rawKleKeys, fallbackMap);
-        kleKeys = filterVisibleKeys(kleKeys, fallbackMap);
-        effectiveLayoutOptions = fallbackMap;
-        kleLayoutRelaxed = true;
-      }
-      const summary =
-        formatLayoutOptionsSummary(labels, decodedLayoutOptions.size ? decodedLayoutOptions : layoutOptionsMap) ||
-        (decodedLayoutOptions.size === 0 && Number.isFinite(packed) ? `raw ${packed}` : '');
-      keyboardLayoutGeometry = { keys: kleKeys, labels, layoutOptionsMap: effectiveLayoutOptions, summary };
+      keyboardLayoutGeometry = deriveActiveKleGeometry(defRes.definition, packed);
+      const debugInfo = keyboardLayoutGeometry
+        ? formatLayoutOptionsDebug(
+            keyboardLayoutGeometry.labels,
+            keyboardLayoutGeometry.packedLayoutOptions,
+            keyboardLayoutGeometry.decodedLayoutOptions,
+            keyboardLayoutGeometry.layoutOptionsMap,
+          )
+        : '';
       deviceCapabilities.innerHTML += `
         <div class="layout-options-info">
           <span class="label">Layout options (saved on keyboard):</span>
-          <span class="value">${escapeHtml(summary || 'Default')}</span>
+          <span class="value">${escapeHtml((keyboardLayoutGeometry && keyboardLayoutGeometry.summary) || 'Default')}</span>
+        </div>
+        <div class="layout-options-info subtle">
+          <span class="label">Layout debug:</span>
+          <span class="value">${escapeHtml(debugInfo)}</span>
         </div>
         ${
-          kleLayoutRelaxed
+          keyboardLayoutGeometry && keyboardLayoutGeometry.fallbackApplied
             ? `<div class="layout-options-info subtle"><span class="label">KLE:</span> <span class="value">Using layout option 0 for each layout group (fallback — saved layout_options may not have matched this definition).</span></div>`
             : ''
         }
@@ -484,95 +538,224 @@ function renderKeyboardLayout(state, targetEl, layerIdx = 0, targetState = null)
   renderMatrixFallbackLayout(state, targetEl, layerIdx, targetState);
 }
 
+function rotatePoint(x, y, cx, cy, angleDeg) {
+  const rad = (angleDeg * Math.PI) / 180;
+  const dx = x - cx;
+  const dy = y - cy;
+  return {
+    x: cx + dx * Math.cos(rad) - dy * Math.sin(rad),
+    y: cy + dx * Math.sin(rad) + dy * Math.cos(rad),
+  };
+}
+
+function keyCornersPx(kleKey, scalePx, spacingPx) {
+  const corners = [];
+  const addRect = (x, y, w, h) => {
+    corners.push([x, y], [x + w, y], [x + w, y + h], [x, y + h]);
+  };
+  const x = scalePx * kleKey.x;
+  const y = scalePx * kleKey.y;
+  const w = scalePx * kleKey.width - spacingPx;
+  const h = scalePx * kleKey.height - spacingPx;
+  addRect(x, y, w, h);
+
+  if (hasSteppedGeometry(kleKey)) {
+    const x2 = x + scalePx * kleKey.x2;
+    const y2 = y + scalePx * kleKey.y2;
+    const w2 = scalePx * kleKey.width2 - spacingPx;
+    const h2 = scalePx * kleKey.height2 - spacingPx;
+    addRect(x2, y2, w2, h2);
+  }
+
+  if (!kleKey.rotation) return corners;
+  const cx = scalePx * kleKey.rotationX;
+  const cy = scalePx * kleKey.rotationY;
+  return corners.map(([px, py]) => {
+    const r = rotatePoint(px, py, cx, cy, kleKey.rotation);
+    return [r.x, r.y];
+  });
+}
+
+function computeKleSvgBounds(keys) {
+  if (!keys || keys.length === 0) {
+    return { width: 10, height: 10, originX: -5, originY: -5 };
+  }
+  const scalePx = KLE_GRID_SCALE * KLE_CELL_PX;
+  const spacingPx = (scalePx * 0.2) / (3.2 + 0.2);
+  const padding = 5;
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (const key of keys) {
+    for (const [cx, cy] of keyCornersPx(key, scalePx, spacingPx)) {
+      if (cx < minX) minX = cx;
+      if (cy < minY) minY = cy;
+      if (cx > maxX) maxX = cx;
+      if (cy > maxY) maxY = cy;
+    }
+  }
+
+  return {
+    width: Math.max(10, maxX - minX + padding * 2),
+    height: Math.max(10, maxY - minY + padding * 2),
+    originX: minX - padding,
+    originY: minY - padding,
+  };
+}
+
+function setSvgText(node, value) {
+  while (node.firstChild) node.removeChild(node.firstChild);
+  node.appendChild(document.createTextNode(value));
+}
+
+function setSvgDiffText(node, fromLabel, toLabel) {
+  while (node.firstChild) node.removeChild(node.firstChild);
+  const mk = (txt, cls) => {
+    const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+    tspan.setAttribute('class', cls);
+    tspan.textContent = txt;
+    return tspan;
+  };
+  node.appendChild(mk(fromLabel, 'old-label'));
+  node.appendChild(mk(' → ', 'arrow'));
+  node.appendChild(mk(toLabel, 'new-label'));
+}
+
+function wrapLabelLines(rawText) {
+  const text = String(rawText || '').trim();
+  if (!text) return [''];
+  if (text.includes('\n')) {
+    return text.split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 2);
+  }
+  if (text.length <= 7) return [text];
+  const sep = text.search(/[_\-\s]/);
+  if (sep > 1 && sep < text.length - 2) {
+    return [text.slice(0, sep), text.slice(sep + 1)].slice(0, 2);
+  }
+  const cut = Math.ceil(text.length / 2);
+  return [text.slice(0, cut), text.slice(cut)];
+}
+
+function setSvgWrappedText(node, text, widthPx) {
+  while (node.firstChild) node.removeChild(node.firstChild);
+  const lines = wrapLabelLines(text).slice(0, 2);
+  const maxLen = Math.max(...lines.map((x) => x.length), 0);
+
+  // Keep text readable, but shrink slightly for long labels.
+  let fontSize = 11;
+  if (maxLen >= 10) fontSize = 10;
+  if (maxLen >= 14) fontSize = 9;
+  if (widthPx < 40) fontSize = Math.max(8, fontSize - 1);
+  node.style.fontSize = `${fontSize}px`;
+
+  if (lines.length === 1) {
+    node.appendChild(document.createTextNode(lines[0]));
+    return;
+  }
+  const first = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+  first.setAttribute('x', node.getAttribute('x') || '0');
+  first.setAttribute('dy', '-0.48em');
+  first.textContent = lines[0];
+  node.appendChild(first);
+
+  const second = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+  second.setAttribute('x', node.getAttribute('x') || '0');
+  second.setAttribute('dy', '1.05em');
+  second.textContent = lines[1];
+  node.appendChild(second);
+}
+
 function renderKleKeyboardLayout(state, targetEl, layerIdx, targetState, geom) {
   targetEl.innerHTML = '';
   const wrap = document.createElement('div');
   wrap.className = 'keyboard-layout-container kle-keyboard-wrap';
 
-  const grid = document.createElement('div');
-  grid.className = 'kle-inline-grid';
-
-  let maxCol = 0;
-  let maxRow = 0;
-  const placements = [];
-
-  for (const kleKey of geom.keys) {
-    if (kleKey.encoderIdx >= 0) {
-      const col = Math.round(kleKey.x * KLE_GRID_SCALE);
-      const row = Math.round(kleKey.y * KLE_GRID_SCALE);
-      const colSpan = Math.max(1, Math.round(kleKey.width * KLE_GRID_SCALE));
-      const rowSpan = Math.max(1, Math.round(kleKey.height * KLE_GRID_SCALE));
-      maxCol = Math.max(maxCol, col + colSpan);
-      maxRow = Math.max(maxRow, row + rowSpan);
-      placements.push({ kleKey, row, col, rowSpan, colSpan, encoder: true });
-      continue;
-    }
-    const stepped = computeSteppedKeyInfo(
-      kleKey.width,
-      kleKey.height,
-      kleKey.x2,
-      kleKey.y2,
-      kleKey.width2,
-      kleKey.height2,
-    );
-    const originX = kleKey.x + (stepped ? stepped.left : 0);
-    const originY = kleKey.y + (stepped ? stepped.top : 0);
-    const spanW = stepped ? stepped.width : kleKey.width;
-    const spanH = stepped ? stepped.height : kleKey.height;
-    const col = Math.round(originX * KLE_GRID_SCALE);
-    const row = Math.round(originY * KLE_GRID_SCALE);
-    const colSpan = Math.max(1, Math.round(spanW * KLE_GRID_SCALE));
-    const rowSpan = Math.max(1, Math.round(spanH * KLE_GRID_SCALE));
-    maxCol = Math.max(maxCol, col + colSpan);
-    maxRow = Math.max(maxRow, row + rowSpan);
-    placements.push({ kleKey, row, col, rowSpan, colSpan, encoder: false });
-  }
-
-  if (!placements.length || maxCol < 1 || maxRow < 1) {
+  const keys = geom && Array.isArray(geom.keys) ? geom.keys : [];
+  if (!keys.length) {
     targetEl.innerHTML = '<div class="empty-state">No KLE geometry to display.</div>';
     return;
   }
 
-  // Fixed pixel tracks (pipette: repeat(totalCols, 8px)) — avoids stretched/distorted keys from 1fr
-  grid.style.gridTemplateColumns = `repeat(${maxCol}, ${KLE_CELL_PX}px)`;
-  grid.style.gridTemplateRows = `repeat(${maxRow}, ${KLE_CELL_PX}px)`;
+  const bounds = computeKleSvgBounds(keys);
+  const board = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  board.classList.add('kle-board-svg');
+  board.setAttribute('width', String(bounds.width));
+  board.setAttribute('height', String(bounds.height));
+  board.setAttribute('viewBox', `${bounds.originX} ${bounds.originY} ${bounds.width} ${bounds.height}`);
 
-  for (const p of placements) {
-    const keyEl = document.createElement('div');
-    keyEl.style.gridColumn = `${p.col + 1} / span ${p.colSpan}`;
-    keyEl.style.gridRow = `${p.row + 1} / span ${p.rowSpan}`;
+  const scalePx = KLE_GRID_SCALE * KLE_CELL_PX;
+  const spacingPx = (scalePx * 0.2) / (3.2 + 0.2);
+  const faceInset = (scalePx * 0.1) / (3.2 + 0.2);
+  const corner = scalePx * 0.08;
 
-    if (p.encoder) {
-      keyEl.className = 'layout-key kle-key encoder-key';
-      keyEl.textContent = '⟳';
-      keyEl.title = 'Encoder';
-      grid.appendChild(keyEl);
+  for (const kleKey of keys) {
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    if (kleKey.rotation) {
+      const rotX = scalePx * kleKey.rotationX;
+      const rotY = scalePx * kleKey.rotationY;
+      group.setAttribute('transform', `translate(${rotX}, ${rotY}) rotate(${kleKey.rotation}) translate(${-rotX}, ${-rotY})`);
+    }
+
+    const x = scalePx * kleKey.x;
+    const y = scalePx * kleKey.y;
+    const w = scalePx * kleKey.width - spacingPx;
+    const h = scalePx * kleKey.height - spacingPx;
+
+    if (kleKey.encoderIdx >= 0) {
+      const face = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      face.setAttribute('x', String(x + faceInset));
+      face.setAttribute('y', String(y + faceInset));
+      face.setAttribute('width', String(Math.max(1, w - 2 * faceInset)));
+      face.setAttribute('height', String(Math.max(1, h - 2 * faceInset)));
+      face.setAttribute('rx', String(corner));
+      face.setAttribute('ry', String(corner));
+      face.setAttribute('class', 'kle-key-path');
+      group.appendChild(face);
+
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('x', String(x + w / 2));
+      label.setAttribute('y', String(y + h / 2));
+      label.setAttribute('text-anchor', 'middle');
+      label.setAttribute('dominant-baseline', 'central');
+      label.setAttribute('class', 'kle-key-text');
+      label.textContent = '⟳';
+      group.appendChild(label);
+      board.appendChild(group);
       continue;
     }
 
-    const unionPath = buildPipetteUnionPath(p.kleKey);
-    let face = keyEl;
+    const unionPath = buildPipetteUnionPath(kleKey);
+    let labelX = x + w / 2;
+    let labelY = y + h / 2;
+    let keyBgNode = null;
     if (unionPath) {
-      keyEl.className = 'kle-key-slot kle-stepped';
-      const vb = steppedUnionViewBox(p.kleKey);
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('viewBox', `${vb.minPx} ${vb.minPy} ${vb.w} ${vb.h}`);
-      svg.setAttribute('preserveAspectRatio', 'none');
-      svg.classList.add('kle-key-svg');
-      const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      pathEl.setAttribute('d', unionPath);
-      pathEl.classList.add('kle-key-path');
-      svg.appendChild(pathEl);
-      keyEl.appendChild(svg);
-      face = document.createElement('div');
-      face.className = 'kle-key-face-overlay';
-      keyEl.appendChild(face);
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', unionPath);
+      path.setAttribute('class', 'kle-key-path');
+      group.appendChild(path);
+      keyBgNode = path;
+
+      const vb = steppedUnionViewBox(kleKey);
+      labelX = vb.minPx + vb.w / 2;
+      labelY = vb.minPy + vb.h / 2;
     } else {
-      keyEl.className = 'layout-key kle-key';
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', String(x + faceInset));
+      rect.setAttribute('y', String(y + faceInset));
+      rect.setAttribute('width', String(Math.max(1, w - 2 * faceInset)));
+      rect.setAttribute('height', String(Math.max(1, h - 2 * faceInset)));
+      rect.setAttribute('rx', String(corner));
+      rect.setAttribute('ry', String(corner));
+      rect.setAttribute('class', 'kle-key-path');
+      group.appendChild(rect);
+      keyBgNode = rect;
     }
 
-    const r = p.kleKey.row;
-    const col = p.kleKey.col;
+    const r = kleKey.row;
+    const col = kleKey.col;
     const currentKey = getKeycodeAt(state, layerIdx, r, col);
     const targetKey = targetState ? getKeycodeAt(targetState, layerIdx, r, col) : null;
     // Preview: show what is stored on the device now; target only drives diff highlighting
@@ -589,47 +772,57 @@ function renderKleKeyboardLayout(state, targetEl, layerIdx, targetState, geom) {
       targetKey !== null &&
       targetKey !== undefined;
 
-    if (isChanged || isNew) {
-      keyEl.classList.add('changed');
+    if (isChanged || isNew && keyBgNode) {
+      keyBgNode.classList.add('changed');
     }
 
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('x', String(labelX));
+    label.setAttribute('y', String(labelY));
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('dominant-baseline', 'central');
+    label.setAttribute('class', 'kle-key-text');
+
     if (displayKey === null || displayKey === undefined || displayKey === 'KC_NO') {
-      face.classList.add('empty');
-      face.textContent = '';
-      face.title = displayKey === 'KC_NO' ? 'KC_NO' : '';
+      setSvgText(label, '');
       if (isChanged || isNew) {
         const curL = currentKey && currentKey !== 'KC_NO' ? keycodeToChar(String(currentKey)) : '—';
         const tgtL = targetKey && targetKey !== 'KC_NO' ? keycodeToChar(String(targetKey)) : '—';
-        face.innerHTML = `<span class="old-label">${curL}</span><span class="arrow">→</span><span class="new-label">${tgtL}</span>`;
-        face.title = `Original: ${currentKey ?? '—'}\nNew: ${targetKey ?? '—'}`;
-        face.classList.remove('empty');
+        setSvgDiffText(label, curL, tgtL);
+        label.classList.add('changed');
       }
     } else if (isTransparentKeycode(displayKey)) {
-      face.classList.add('transparent-key');
-      face.textContent = '▼';
-      face.title = 'Transparent';
+      setSvgText(label, '▼');
+      label.classList.add('transparent-key');
       if (isChanged || isNew) {
         const curL = currentKey && !isTransparentKeycode(currentKey) ? keycodeToChar(String(currentKey)) : '▼';
         const tgtL = targetKey && !isTransparentKeycode(targetKey) ? keycodeToChar(String(targetKey)) : '▼';
-        face.innerHTML = `<span class="old-label">${curL}</span><span class="arrow">→</span><span class="new-label">${tgtL}</span>`;
-        face.title = `Original: ${currentKey ?? '—'}\nNew: ${targetKey ?? '—'}`;
+        setSvgDiffText(label, curL, tgtL);
+        label.classList.add('changed');
       }
     } else {
-      const label = keycodeToChar(displayKey);
-      face.textContent = label;
-      face.title = String(displayKey);
+      const keyLabel = keycodeToChar(displayKey);
+      setSvgWrappedText(label, keyLabel, w);
 
       if (isChanged || isNew) {
-        const currentLabel = currentKey ? keycodeToChar(currentKey) : 'Empty';
-        const targetLabel = keycodeToChar(targetKey);
-        face.title = `Original: ${currentKey || 'Empty'}\nNew: ${targetKey}`;
-        face.innerHTML = `<span class="old-label">${currentLabel}</span><span class="arrow">→</span><span class="new-label">${targetLabel}</span>`;
+        const currentLabel = currentKey ? keycodeToChar(String(currentKey)) : '—';
+        const targetLabel = targetKey ? keycodeToChar(String(targetKey)) : '—';
+        setSvgDiffText(label, currentLabel, targetLabel);
+        label.classList.add('changed');
       }
     }
-    grid.appendChild(keyEl);
+
+    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    title.textContent = isChanged || isNew
+      ? `Original: ${currentKey ?? '—'}\nNew: ${targetKey ?? '—'}`
+      : String(displayKey ?? '');
+    group.appendChild(title);
+
+    group.appendChild(label);
+    board.appendChild(group);
   }
 
-  wrap.appendChild(grid);
+  wrap.appendChild(board);
   targetEl.appendChild(wrap);
 }
 

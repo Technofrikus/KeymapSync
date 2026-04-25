@@ -7,13 +7,26 @@
     const result = new Map();
     if (options < 0 || !labels || !labels.length) return result;
     let bitPos = 0;
+    // VIA/Vial packs layout options in reverse label order:
+    // last label consumes the least-significant bits first.
     for (let idx = labels.length - 1; idx >= 0; idx--) {
       const label = labels[idx];
-      const numChoices = typeof label === 'string' ? 2 : label.length - 1;
+      // Some definitions encode booleans as a single-item array [name].
+      // Treat both string labels and array labels with <=1 entries as boolean.
+      const numChoices =
+        typeof label === 'string'
+          ? 2
+          : (Array.isArray(label) && label.length <= 1)
+            ? 2
+            : label.length - 1;
       const numBits = numChoices <= 1 ? 0 : 32 - Math.clz32(numChoices - 1);
-      const mask = (1 << numBits) - 1;
-      result.set(idx, (options >>> bitPos) & mask);
-      bitPos += numBits;
+      if (numBits > 0) {
+        const mask = (1 << numBits) - 1;
+        result.set(idx, (options >>> bitPos) & mask);
+        bitPos += numBits;
+      } else {
+        result.set(idx, 0);
+      }
     }
     return result;
   }
@@ -139,6 +152,15 @@
     });
 
     const countByIdx = new Map();
+    const minOptionForIdx = new Map();
+    for (const k of baseKeys) {
+      if (k.layoutIndex >= 0) {
+        const cur = minOptionForIdx.get(k.layoutIndex);
+        if (cur === undefined || k.layoutOption < cur) {
+          minOptionForIdx.set(k.layoutIndex, k.layoutOption);
+        }
+      }
+    }
     for (const k of filtered) {
       if (k.layoutIndex >= 0) {
         countByIdx.set(k.layoutIndex, (countByIdx.get(k.layoutIndex) || 0) + 1);
@@ -147,13 +169,39 @@
 
     const merged = [...filtered];
     for (const k of baseKeys) {
-      if (k.layoutIndex < 0 || k.layoutOption !== 0) continue;
+      if (k.layoutIndex < 0) continue;
       const cnt = countByIdx.get(k.layoutIndex) || 0;
       if (cnt > 0) continue;
-      const anyForIdx = baseKeys.some((x) => x.layoutIndex === k.layoutIndex);
-      if (anyForIdx && !merged.includes(k)) merged.push(k);
+      
+      const fallbackOpt = minOptionForIdx.get(k.layoutIndex);
+      if (k.layoutOption === fallbackOpt && !merged.includes(k)) {
+        merged.push(k);
+      }
     }
-    return merged;
+
+    // Avoid duplicate matrix positions (some definitions include decal + real key for same row/col).
+    // Prefer non-decal keys when both exist.
+    const byPos = new Map();
+    const out = [];
+    for (const key of merged) {
+      const l0 = key.labels && key.labels[0];
+      const pos = l0 != null && String(l0).includes(',') ? String(l0) : null;
+      if (!pos) {
+        out.push(key);
+        continue;
+      }
+      const prevIdx = byPos.get(pos);
+      if (prevIdx === undefined) {
+        byPos.set(pos, out.length);
+        out.push(key);
+        continue;
+      }
+      const prev = out[prevIdx];
+      if (prev && prev.decal && !key.decal) {
+        out[prevIdx] = key;
+      }
+    }
+    return out;
   }
 
   /**
