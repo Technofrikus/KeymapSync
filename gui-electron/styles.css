@@ -1131,28 +1131,29 @@ button:disabled {
 .layout-key.changed {
   border-color: #22c55e;
   background: rgba(34, 197, 94, 0.1);
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.2);
+  box-shadow: 0 0 4px rgba(34, 197, 94, 0.3);
   flex-direction: column;
-  height: auto;
-  min-height: 42px;
-  font-size: 9px;
-  gap: 1px;
+  height: 100%;
+  font-size: 8px;
+  gap: 0;
+  justify-content: center;
 }
 
 .layout-key .old-label {
-  color: #f87171;
+  color: #ef4444;
   text-decoration: line-through;
-  opacity: 0.7;
+  opacity: 0.9;
 }
 
 .layout-key .new-label {
-  color: #4ade80;
+  color: #22c55e;
   font-weight: bold;
 }
 
 .layout-key .arrow {
-  font-size: 10px;
-  color: #94a3b8;
+  font-size: 11px;
+  color: #64748b;
   line-height: 1;
+  font-weight: bold;
 }
 

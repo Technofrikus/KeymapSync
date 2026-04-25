@@ -453,6 +453,7 @@ function targetKey(target) {
 }
 
 function translateSymbol(value, target, warnings) {
+  if (value === '') return 'KC_NO';
   if (!value) return null;
   const upper = typeof value === 'string' ? value.trim().toUpperCase() : '';
   if (upper === 'NO') return 'KC_NO';

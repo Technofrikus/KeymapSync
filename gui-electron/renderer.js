@@ -472,7 +472,8 @@ async function selectDevice(device, cardEl) {
 }
 
 function renderKeyboardLayout(state, targetEl, layerIdx = 0, targetState = null) {
-  if (!state || !state.layout || !state.layout[layerIdx]) {
+  const layerExists = (state && state.layout && state.layout[layerIdx]) || (targetState && targetState.layout && targetState.layout[layerIdx]);
+  if (!layerExists) {
     targetEl.innerHTML = '<div class="empty-state">No layout data for this layer.</div>';
     return;
   }
@@ -596,6 +597,13 @@ function renderKleKeyboardLayout(state, targetEl, layerIdx, targetState, geom) {
       face.classList.add('empty');
       face.textContent = '';
       face.title = displayKey === 'KC_NO' ? 'KC_NO' : '';
+      if (isChanged || isNew) {
+        const curL = currentKey && currentKey !== 'KC_NO' ? keycodeToChar(String(currentKey)) : '—';
+        const tgtL = targetKey && targetKey !== 'KC_NO' ? keycodeToChar(String(targetKey)) : '—';
+        face.innerHTML = `<span class="old-label">${curL}</span><span class="arrow">→</span><span class="new-label">${tgtL}</span>`;
+        face.title = `Original: ${currentKey ?? '—'}\nNew: ${targetKey ?? '—'}`;
+        face.classList.remove('empty');
+      }
     } else if (isTransparentKeycode(displayKey)) {
       face.classList.add('transparent-key');
       face.textContent = '▼';
@@ -674,6 +682,14 @@ function renderMatrixFallbackLayout(state, targetEl, layerIdx = 0, targetState =
       if (displayKey === null || displayKey === undefined || displayKey === 'KC_NO') {
         keyEl.classList.add('empty');
         keyEl.textContent = '';
+        if (isChanged || isNew) {
+          keyEl.classList.add('changed');
+          const curL = currentKey && currentKey !== 'KC_NO' ? keycodeToChar(String(currentKey)) : '—';
+          const tgtL = targetKey && targetKey !== 'KC_NO' ? keycodeToChar(String(targetKey)) : '—';
+          keyEl.innerHTML = `<span class="old-label">${curL}</span><span class="arrow">→</span><span class="new-label">${tgtL}</span>`;
+          keyEl.title = `Original: ${currentKey ?? '—'}\nNew: ${targetKey ?? '—'}`;
+          keyEl.classList.remove('empty');
+        }
       } else if (isTransparentKeycode(displayKey)) {
         keyEl.classList.add('transparent-key');
         keyEl.textContent = '▼';
