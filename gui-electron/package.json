@@ -17,6 +17,7 @@
   "build": {
     "appId": "com.keymapsync.gui",
     "productName": "KeymapSync",
+    "icon": "KSiconReal.png",
     "directories": {
       "output": "dist"
     },
@@ -33,6 +34,7 @@
       "kle-layout.js",
       "kle-rect-union.js",
       "generate_vial_keymaps.js",
+      "KSiconReal.png",
       "package.json"
     ],
     "asar": true,

@@ -5,6 +5,8 @@ const { spawn } = require('child_process');
 const generator = require('./generate_vial_keymaps.js');
 const { fetchKeyboardDefinition } = require('./vial-fetch-definition.js');
 
+app.setName('KeymapSync');
+
 const isDev = !app.isPackaged;
 
 // Enable hot reload in development
@@ -204,6 +206,10 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1100,
     height: 800,
+    title: "",
+    titleBarStyle: 'hidden',
+    trafficLightPosition: { x: 10, y: 10 },
+    icon: path.join(__dirname, 'KSiconReal.png'),
     webPreferences: {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
@@ -253,6 +259,9 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  if (process.platform === 'darwin') {
+    app.dock.setIcon(path.join(__dirname, 'KSiconReal.png'));
+  }
   createWindow();
 
   app.on('activate', () => {
