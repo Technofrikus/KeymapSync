@@ -79,7 +79,7 @@
     "xz-decompress": "^0.2.3"
   },
   "devDependencies": {
-    "electron": "^35.7.5",
+    "electron": "^41.3.0",
     "electron-builder": "^26.8.1",
     "electron-reload": "^2.0.0-alpha.1"
   }

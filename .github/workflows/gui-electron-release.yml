@@ -126,7 +126,6 @@ jobs:
           const path = require('path');
           const { execFileSync } = require('child_process');
           const resourcesDir = process.env.RES_DIR;
-          const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
           const asarPath = process.env.ASAR_PATH;
 
           function walk(dir, out = []) {
@@ -147,7 +146,10 @@ jobs:
           }
           console.log(`Found bundled vitaly at: ${vitalyPath}`);
 
-          const out = execFileSync(npxCmd, ['asar', 'list', asarPath], { encoding: 'utf8' });
+          const asarCli = require.resolve('@electron/asar/bin/asar.js', {
+            paths: [process.cwd()]
+          });
+          const out = execFileSync(process.execPath, [asarCli, 'list', asarPath], { encoding: 'utf8' });
           const mustContain = ['kle-parser.js', 'keycode-mapping.js', 'kle-rect-union.js', 'renderer.js'];
           const missing = mustContain.filter((f) => !out.includes(f));
           if (missing.length) {
