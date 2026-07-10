@@ -11,62 +11,62 @@
   },
   "alphaMappings": {
     "Q": {
-      "layer1": "NO",
-      "layer2": "°",
+      "layer1": "°",
+      "layer2": "NO",
       "base": null,
       "aliases": []
     },
     "W": {
-      "layer1": "NO",
-      "layer2": "^",
+      "layer1": "^",
+      "layer2": "NO",
       "base": null,
       "aliases": []
     },
     "E": {
-      "layer1": "NO",
-      "layer2": "{",
+      "layer1": "{",
+      "layer2": "NO",
       "base": null,
       "aliases": []
     },
     "R": {
-      "layer1": "NO",
-      "layer2": "}",
+      "layer1": "}",
+      "layer2": "NO",
       "base": null,
       "aliases": []
     },
     "T": {
-      "layer1": "NO",
-      "layer2": "%",
+      "layer1": "%",
+      "layer2": "NO",
       "base": null,
       "aliases": []
     },
     "Y": {
-      "layer1": "NO",
-      "layer2": "$",
+      "layer1": "$",
+      "layer2": "NO",
       "base": null,
       "aliases": []
     },
     "U": {
-      "layer1": "+",
-      "layer2": "ü",
+      "layer1": "ü",
+      "layer2": "+",
       "base": null,
       "aliases": []
     },
     "I": {
-      "layer1": "-",
-      "layer2": "&",
+      "layer1": "&",
+      "layer2": "-",
       "base": null,
       "aliases": []
     },
     "O": {
-      "layer1": "*",
-      "layer2": "ö",
+      "layer1": "ö",
+      "layer2": "*",
       "base": null,
       "aliases": []
     },
     "P": {
-      "layer1": "/",
-      "layer2": "§",
+      "layer1": "§",
+      "layer2": "/",
       "base": null,
       "aliases": []
     },
@@ -77,58 +77,58 @@
       "aliases": []
     },
     "A": {
-      "layer1": "1",
-      "layer2": "ä",
+      "layer1": "ä",
+      "layer2": "1",
       "base": null,
       "aliases": []
     },
     "S": {
-      "layer1": "2",
-      "layer2": "ß",
+      "layer1": "ß",
+      "layer2": "2",
       "base": null,
       "aliases": []
     },
     "D": {
-      "layer1": "3",
-      "layer2": "#",
+      "layer1": "#",
+      "layer2": "3",
       "base": null,
       "aliases": []
     },
     "F": {
-      "layer1": "4",
-      "layer2": "!",
+      "layer1": "!",
+      "layer2": "4",
       "base": null,
       "aliases": []
     },
     "G": {
-      "layer1": "5",
-      "layer2": "-",
+      "layer1": "-",
+      "layer2": "5",
       "base": null,
       "aliases": []
     },
     "H": {
-      "layer1": "6",
-      "layer2": "\"",
+      "layer1": "\"",
+      "layer2": "6",
       "base": "TD(H_GUIH)",
       "aliases": [
         "TD(H_GUIH)"
       ]
     },
     "J": {
-      "layer1": "7",
-      "layer2": "?",
+      "layer1": "?",
+      "layer2": "7",
       "base": null,
       "aliases": []
     },
     "K": {
-      "layer1": "8",
-      "layer2": "(",
+      "layer1": "(",
+      "layer2": "8",
       "base": null,
       "aliases": []
     },
     "L": {
-      "layer1": "9",
-      "layer2": ")",
+      "layer1": ")",
+      "layer2": "9",
       "base": null,
       "aliases": []
     },
@@ -139,44 +139,44 @@
       "aliases": []
     },
     "Z": {
-      "layer1": "NO",
-      "layer2": "<",
+      "layer1": "<",
+      "layer2": "NO",
       "base": null,
       "aliases": []
     },
     "X": {
-      "layer1": "NO",
-      "layer2": ">",
+      "layer1": ">",
+      "layer2": "NO",
       "base": null,
       "aliases": []
     },
     "C": {
-      "layer1": "NO",
-      "layer2": "[",
+      "layer1": "[",
+      "layer2": "NO",
       "base": null,
       "aliases": []
     },
     "V": {
-      "layer1": "NO",
-      "layer2": "]",
+      "layer1": "]",
+      "layer2": "NO",
       "base": null,
       "aliases": []
     },
     "B": {
-      "layer1": "NO",
-      "layer2": "'",
+      "layer1": "'",
+      "layer2": "NO",
       "base": null,
       "aliases": []
     },
     "N": {
-      "layer1": "NO",
-      "layer2": "`",
+      "layer1": "`",
+      "layer2": "NO",
       "base": null,
       "aliases": []
     },
     "M": {
-      "layer1": "=",
-      "layer2": "_",
+      "layer1": "_",
+      "layer2": "=",
       "base": null,
       "aliases": []
     },
@@ -187,8 +187,8 @@
       "aliases": []
     },
     ",": {
-      "layer1": "",
-      "layer2": "|",
+      "layer1": "|",
+      "layer2": "",
       "base": null,
       "aliases": []
     },
@@ -228,6 +228,20 @@
         "KC_8"
       ],
       "result": "KC_BSPC"
+    },
+    {
+      "keys": [
+        "KC_4",
+        "KC_5"
+      ],
+      "result": "KC_BSPC"
+    },
+    {
+      "keys": [
+        "KC_5",
+        "KC_6"
+      ],
+      "result": "KC_DEL"
     }
   ],
   "tapDanceOverrides": [

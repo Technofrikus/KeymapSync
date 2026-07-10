@@ -5,6 +5,8 @@ dist/
 gui-electron/dist/
 gui-electron/bin/
 output/
+# Build artefact — copied from root by prep-dist.js during packaging.
+gui-electron/alpha_layers.json
 # Local reference trees only — not versioned (see README if you sync reference copies).
 Reference only/
 .git-filter-repo-replacements.txt
