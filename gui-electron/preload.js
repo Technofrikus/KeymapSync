@@ -18,12 +18,12 @@ contextBridge.exposeInMainWorld('api', {
   },
   clearLogListeners: () => ipcRenderer.removeAllListeners('log:data'),
   
-  // Vitaly commands
-  listDevices: () => ipcRenderer.invoke('vitaly:devices'),
-  saveDeviceState: (deviceId) => ipcRenderer.invoke('vitaly:save', deviceId),
-  applyDeviceState: (deviceId, type, data) => ipcRenderer.invoke('vitaly:apply', deviceId, type, data),
-  lockDevice: (deviceId, state) => ipcRenderer.invoke('vitaly:lock', deviceId, state),
-  getDeviceLayout: (deviceId) => ipcRenderer.invoke('vitaly:layout', deviceId),
+  device: {
+    discover: () => ipcRenderer.invoke('device:discover'),
+    snapshot: (deviceId) => ipcRenderer.invoke('device:snapshot', deviceId),
+    apply: (deviceId, state) => ipcRenderer.invoke('device:apply', deviceId, state),
+    lock: (deviceId, locked) => ipcRenderer.invoke('device:lock', deviceId, locked),
+    layout: (deviceId) => ipcRenderer.invoke('device:layout', deviceId),
+  },
   fetchKeyboardDefinition: (filter) => ipcRenderer.invoke('vial:fetchDefinition', filter)
 });
-

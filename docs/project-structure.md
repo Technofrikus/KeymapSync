@@ -3,7 +3,8 @@
 ## Directory Overview
 - `gui-electron/`
     - Main application logic (Electron).
-    - `main.js`: Main process; manages window, IPC, and calls `vitaly`.
+    - `main.js`: Main process; manages window and IPC.
+    - `device-transport.js`: Vitaly-backed device discovery, snapshot, apply, lock, and layout operations.
     - `renderer.js`: UI logic, diffing, and user interaction.
     - `keymap-presentation.js`: Keyboard-preview layout preparation and rendering.
     - `preload.js`: IPC bridge between Main and Renderer.

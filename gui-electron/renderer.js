@@ -186,7 +186,7 @@ async function refreshDevices() {
   keyboardLayoutGeometry = null;
 
   try {
-    const devices = await window.api.listDevices();
+    const devices = await window.api.device.discover();
     
     if (!devices || devices.length === 0) {
       deviceList.innerHTML = '<div class="empty-state">No Vial keyboards found.</div>';
@@ -252,12 +252,12 @@ async function selectDevice(device, cardEl) {
   keyboardLayoutGeometry = null;
   onlineStatus.textContent = 'Loading keyboard layout and options...';
   try {
-    currentDeviceState = await window.api.saveDeviceState(selectedDevice.id);
+    currentDeviceState = await window.api.device.snapshot(selectedDevice.id);
 
     let layoutInfo = '';
     try {
-      if (window.api && typeof window.api.getDeviceLayout === 'function') {
-        const raw = await window.api.getDeviceLayout(selectedDevice.id);
+      if (window.api && window.api.device && typeof window.api.device.layout === 'function') {
+        const raw = await window.api.device.layout(selectedDevice.id);
         if (raw && String(raw).trim()) layoutInfo = String(raw).trim();
       }
     } catch {
@@ -335,7 +335,7 @@ async function previewOnlineSync() {
   
   try {
     // 1. Read current state
-    currentDeviceState = await window.api.saveDeviceState(selectedDevice.id);
+    currentDeviceState = await window.api.device.snapshot(selectedDevice.id);
     
     // 2. Transform without mutating the state read from the keyboard.
     const transformation = await window.api.processConfig(currentDeviceState, configObj);
@@ -559,7 +559,7 @@ async function runOnlineSync() {
   
   try {
     // Re-read firmware so macros/settings/combos match the device right before load (avoids stale preview state).
-    currentDeviceState = await window.api.saveDeviceState(selectedDevice.id);
+    currentDeviceState = await window.api.device.snapshot(selectedDevice.id);
 
     // 1. Prepare data based on options
     const finalDoc = JSON.parse(JSON.stringify(currentDeviceState));
@@ -575,7 +575,7 @@ async function runOnlineSync() {
     }
     
     // 2. Apply
-    await window.api.applyDeviceState(selectedDevice.id, 'load', finalDoc);
+    await window.api.device.apply(selectedDevice.id, finalDoc);
     
     onlineStatus.textContent = 'Sync completed successfully!';
     runOnlineSyncBtn.classList.add('hidden');

@@ -33,6 +33,8 @@
       "vial-fetch-definition.js",
       "kle-layout.js",
       "kle-rect-union.js",
+      "keymap-presentation.js",
+      "device-transport.js",
       "generate_vial_keymaps.js",
       "KSiconReal.png",
       "package.json"

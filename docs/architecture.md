@@ -19,7 +19,7 @@ KeymapSync is a configuration management tool for Vial-compatible keyboards. It 
 - **Runtime**: Electron/Node.js for file/process management; child processes for `vitaly` calls.
 
 ## API Structure (IPC)
-- `vitaly:*`: Device listing, state saving (`save`), state applying (`load`), layout info.
+- `device:*`: Device discovery, state snapshots, state application, locking, and layout info. The IPC handlers delegate all Vitaly-specific protocol details to `device-transport.js`.
 - `alpha:*`: Loading/saving `alpha_layers.json`.
 - `generator:*`: Running the mapping logic.
 - `vial:*`: Fetching keyboard definitions.
