@@ -1,4 +1,7 @@
 const assert = require('assert');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const {
   translateSymbol,
   extractAlphaFromKey,
@@ -6,7 +9,9 @@ const {
   targetKey,
   replaceTapDanceNamesInString,
   buildTapDanceNameToIndex,
-  processConfig
+  processConfig,
+  transformKeymapState,
+  transformVilFile
 } = require('./generate_vial_keymaps');
 
 function runTests() {
@@ -37,13 +42,49 @@ function runTests() {
     tap_dance: [['KC_H', 'LGUI(KC_H)', 'KC_NO', 'KC_NO', 200]],
     combo: []
   };
-  processConfig(doc, {
+  const processed = processConfig(doc, {
     target: { language: 'de', os: 'mac' },
     layers: { alpha: 0, symbol: 1, number: 2 },
     alphaMappings: {},
     tapDanceOverrides: [{ name: 'H_GUIH', tap: 'KC_H', hold: 'LGUI(KC_H)' }]
   });
-  assert.strictEqual(doc.layout[0][0][0], 'TD(0)');
+  assert.strictEqual(doc.layout[0][0][0], 'TD(H_GUIH)');
+  assert.strictEqual(processed.layout[0][0][0], 'TD(0)');
+
+  const warningResult = transformKeymapState(
+    { layout: [[['KC_A']]] },
+    {
+      target: { language: 'en', os: 'mac' },
+      layers: { alpha: 0, symbol: 1, number: 2 },
+      alphaMappings: { A: { layer1: '☃', layer2: '1' } }
+    }
+  );
+  assert.deepStrictEqual(warningResult.warnings, ['☃']);
+  assert.strictEqual(warningResult.state.layout[1][0][0], '☃');
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'keymapsync-test-'));
+  try {
+    const inputPath = path.join(tempDir, 'input.vil');
+    const outputDir = path.join(tempDir, 'output');
+    const uid = '12345678901234567890';
+    fs.mkdirSync(outputDir);
+    fs.writeFileSync(inputPath, `{\n  "uid": ${uid},\n  "layout": [[ ["KC_A"] ]]\n}`);
+
+    const fileResult = transformVilFile({
+      inputPath,
+      outputDir,
+      config: {
+        target: { language: 'en', os: 'mac' },
+        layers: { alpha: 0, symbol: 1, number: 2 },
+        alphaMappings: { A: { layer1: '!', layer2: '1' } }
+      }
+    });
+    assert.strictEqual(path.basename(fileResult.outputPath), 'input_edited.vil');
+    assert.match(fs.readFileSync(fileResult.outputPath, 'utf8'), new RegExp(`"uid": ${uid}`));
+    assert.match(fs.readFileSync(inputPath, 'utf8'), new RegExp(`"uid": ${uid}`));
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 
   console.log('All tests passed.');
 }
@@ -51,4 +92,3 @@ function runTests() {
 if (require.main === module) {
   runTests();
 }
-

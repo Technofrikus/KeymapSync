@@ -952,9 +952,10 @@ async function previewOnlineSync() {
     // 1. Read current state
     currentDeviceState = await window.api.saveDeviceState(selectedDevice.id);
     
-    // 2. Clone and process to get target state
-    const docToProcess = JSON.parse(JSON.stringify(currentDeviceState));
-    targetDeviceState = await window.api.processConfig(docToProcess, configObj);
+    // 2. Transform without mutating the state read from the keyboard.
+    const transformation = await window.api.processConfig(currentDeviceState, configObj);
+    targetDeviceState = transformation.state;
+    transformation.warnings.forEach((warning) => appendLog(`Warning: untranslated symbol ${warning}\n`));
     
     // 3. Compare and show diff
     const diff = calculateDiff(currentDeviceState, targetDeviceState);
@@ -2142,4 +2143,3 @@ if (window.api?.onSaveBeforeQuit) {
 }
 
 initDefaults();
-

@@ -430,7 +430,7 @@ ipcMain.handle('alpha:save', async (_event, filePath, content) => {
 });
 
 ipcMain.handle('generator:process', async (_event, doc, config) => {
-  return generator.processConfig(doc, config);
+  return generator.transformKeymapState(doc, config);
 });
 
 ipcMain.handle('generator:run', async (_event, opts = {}) => {
@@ -447,41 +447,19 @@ ipcMain.handle('generator:run', async (_event, opts = {}) => {
       throw new Error(`Config not found at ${defaultPaths.config}`);
     }
     
-    if (!fs.existsSync(defaultPaths.input)) {
-      fs.mkdirSync(defaultPaths.input, { recursive: true });
-    }
-    if (!fs.existsSync(defaultPaths.output)) {
-      fs.mkdirSync(defaultPaths.output, { recursive: true });
-    }
-
+    if (!fs.existsSync(defaultPaths.input)) fs.mkdirSync(defaultPaths.input, { recursive: true });
     const config = JSON.parse(fs.readFileSync(defaultPaths.config, 'utf8'));
-    const files = fs.readdirSync(defaultPaths.input).filter((f) => f.endsWith('.vil'));
-    
-    log(`Found ${files.length} files in ${defaultPaths.input}`);
-    
-    for (const file of files) {
-      const inputPath = path.join(defaultPaths.input, file);
-      const raw = fs.readFileSync(inputPath, 'utf8');
-      const uidMatch = raw.match(/"uid"\s*:\s*([0-9]+)/);
-      const uidLiteral = uidMatch ? uidMatch[1] : null;
-      const doc = JSON.parse(raw);
-      
-      generator.applyAlphaMappings(doc, config);
-      generator.applyOverrides(doc, config);
-      
-      const { name, ext } = path.parse(file);
-      const outputPath = path.join(defaultPaths.output, `${name}_edited${ext}`);
-      
-      const json = JSON.stringify(doc, null, 2);
-      if (uidLiteral) {
-        const replaced = json.replace(/"uid"\s*:\s*"?[0-9A-Za-z]+"?/, `"uid": ${uidLiteral}`);
-        fs.writeFileSync(outputPath, replaced);
-      } else {
-        fs.writeFileSync(outputPath, json);
-      }
-      
-      log(`Processed: ${file} -> ${path.basename(outputPath)}`);
-    }
+    const { results, warnings } = await generator.transformVilDirectory({
+      inputDir: opts.input || defaultPaths.input,
+      outputDir: opts.output || defaultPaths.output,
+      config
+    });
+
+    log(`Processed ${results.length} file(s).`);
+    results.forEach(({ inputPath, outputPath }) => {
+      log(`Processed: ${path.basename(inputPath)} -> ${path.basename(outputPath)}`);
+    });
+    warnings.forEach((warning) => log(`Warning: untranslated symbol ${warning}`));
     
     log('Generator finished successfully.');
     return { code: 0 };

@@ -5,7 +5,7 @@ KeymapSync is a configuration management tool for Vial-compatible keyboards. It 
 
 ## Main Modules
 - **GUI (Electron)**: Main process (`main.js`) manages lifecycle and IPC; Renderer process (`renderer.js`) handles UI/KLE visualization.
-- **Generator (`generate_vial_keymaps.js`)**: Core logic for parsing `.vil` files and applying mappings from `alpha_layers.json`.
+- **Keymap State transformation module (`gui-electron/generate_vial_keymaps.js`)**: Shared logic for parsing `.vil` files, applying Alpha Mappings, preserving UIDs, and writing `_edited.vil` output. The root `generate_vial_keymaps.js` is its CLI adapter.
 - **Keyboard Interface (`vitaly`)**: Rust-based CLI tool (bundled binary) for direct keyboard communication (HID).
 - **Vial Integration (`vial-fetch-definition.js`)**: Fetches JSON definitions for specific keyboards from online/local sources.
 
@@ -42,5 +42,4 @@ KeymapSync is a configuration management tool for Vial-compatible keyboards. It 
 - `electron-builder`: Packaging.
 
 ## Technical Debt
-- **Sync Logic**: `generate_vial_keymaps.js` has some duplication with internal generator calls in `main.js`.
 - **KLE Parsing**: Complex manual decoding of KLE JSON into grids.

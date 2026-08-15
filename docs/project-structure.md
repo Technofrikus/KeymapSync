@@ -22,7 +22,7 @@
 ## Purpose of Main Components
 - **Keyboard Layout Logic**: Found in `kle-parser.js`, `kle-layout.js`, `kle-rect-union.js`. Used for visual grid rendering.
 - **Keycode Mappings**: `keycode-mapping.js` contains a massive map of QMK/Vial keycodes to names.
-- **Generator Logic**: `generate_vial_keymaps.js` (root) and `gui-electron/generate_vial_keymaps.js` (same logic) - both read `alpha_layers.json` from the project root.
+- **Generator Logic**: `gui-electron/generate_vial_keymaps.js` is the shared Keymap State transformation module. Root `generate_vial_keymaps.js` is the CLI adapter; both use `alpha_layers.json` from the project root.
 
 ## Hot Paths
 - `gui-electron/renderer.js`: Most active UI changes happen here.
@@ -35,4 +35,4 @@
 - `alphaMappings`: Key-value pairs in `alpha_layers.json`.
 
 ## Legacy / Inactive
-- Root level `generate_vial_keymaps.js` vs `gui-electron/generate_vial_keymaps.js`: Both now read from `KeymapSync/alpha_layers.json` (the single source of truth). Root is for CLI, GUI for the app.
+- Root level `generate_vial_keymaps.js`: CLI adapter for the shared transformation module.

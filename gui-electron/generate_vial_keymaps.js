@@ -45,9 +45,9 @@ function saveJsonWithUid(filePath, data, uidLiteral) {
   }
 }
 
-function ensureOutputDir() {
-  if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+function ensureOutputDir(outputDir = OUTPUT_DIR) {
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
   }
 }
 
@@ -571,7 +571,7 @@ async function logDebug(hypothesisId, location, message, data, runId) {
 
 function applyAlphaMappings(doc, config, runId) {
   const { alphaMappings, layers, target } = config;
-  if (!alphaMappings) return;
+  if (!alphaMappings) return [];
   const aliasMap = buildAliasMap(alphaMappings);
   const alphaLayerIdx = layers.alpha ?? 0;
   // Map layer1/2 strictly by their numeric indices: 1 stays 1, 2 stays 2.
@@ -590,7 +590,7 @@ function applyAlphaMappings(doc, config, runId) {
   const symbolLayer = doc.layout[symbolLayerIdx];
   const numberLayer = doc.layout[numberLayerIdx];
 
-  if (!alphaLayer) return;
+  if (!alphaLayer) return [];
 
   for (let r = 0; r < alphaLayer.length; r++) {
     for (let c = 0; c < alphaLayer[r].length; c++) {
@@ -641,6 +641,7 @@ function applyAlphaMappings(doc, config, runId) {
       `[vial-gen] Untranslated symbols (check config or add explicit keycodes): ${Array.from(missingSymbols).join(", ")}`,
     );
   }
+  return Array.from(missingSymbols);
 }
 
 /**
@@ -700,13 +701,16 @@ function normalizeTapDanceKeycodesInDoc(doc, config) {
   }
 }
 
-function processConfig(doc, config, runId = null) {
-  // Deep clone to avoid in-place modification of the original if desired,
-  // though for current usage in-place is what's happening.
-  applyAlphaMappings(doc, config, runId);
-  applyOverrides(doc, config, runId);
-  normalizeTapDanceKeycodesInDoc(doc, config);
-  return doc;
+function transformKeymapState(keymapState, alphaMapping, runId = null) {
+  const state = structuredClone(keymapState);
+  const warnings = applyAlphaMappings(state, alphaMapping, runId);
+  applyOverrides(state, alphaMapping, runId);
+  normalizeTapDanceKeycodesInDoc(state, alphaMapping);
+  return { state, warnings };
+}
+
+function processConfig(keymapState, alphaMapping, runId = null) {
+  return transformKeymapState(keymapState, alphaMapping, runId).state;
 }
 
 function applyOverrides(doc, config, runId) {
@@ -801,15 +805,28 @@ function applyOverrides(doc, config, runId) {
   }
 }
 
+function transformVilFile({ inputPath, outputDir = OUTPUT_DIR, config, runId = null }) {
+  const { doc, uidLiteral } = loadJsonWithUid(inputPath);
+  const { state, warnings } = transformKeymapState(doc, config, runId);
+  const { name, ext } = path.parse(inputPath);
+  const outputPath = path.join(outputDir, `${name}_edited${ext}`);
+  saveJsonWithUid(outputPath, state, uidLiteral);
+  return { inputPath, outputPath, warnings };
+}
+
+async function transformVilDirectory({ inputDir = INPUT_DIR, outputDir = OUTPUT_DIR, config, runId = null }) {
+  ensureOutputDir(outputDir);
+  const files = fs.readdirSync(inputDir).filter((file) => file.endsWith(".vil"));
+  const results = files.map((file) =>
+    transformVilFile({ inputPath: path.join(inputDir, file), outputDir, config, runId }),
+  );
+  return { results, warnings: results.flatMap((result) => result.warnings) };
+}
+
 async function main() {
   const runId = `gen-run-${Date.now()}`;
-  if (!fs.existsSync(CONFIG_PATH)) {
-    console.error(`Config not found at ${CONFIG_PATH}`);
-    process.exit(1);
-  }
-  ensureOutputDir();
+  if (!fs.existsSync(CONFIG_PATH)) throw new Error(`Config not found at ${CONFIG_PATH}`);
   const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
-
   const files = fs.readdirSync(INPUT_DIR).filter((f) => f.endsWith(".vil"));
   await logDebug(
     "H0-config",
@@ -823,22 +840,14 @@ async function main() {
     runId,
   );
 
-  for (const file of files) {
-    const inputPath = path.join(INPUT_DIR, file);
-    const parsed = loadJsonWithUid(inputPath);
-    const doc = parsed.doc;
-    const uidLiteral = parsed.uidLiteral;
-    applyAlphaMappings(doc, config, runId);
-    applyOverrides(doc, config, runId);
-    const { name, ext } = path.parse(file);
-    const outputPath = path.join(OUTPUT_DIR, `${name}_edited${ext}`);
-    saveJsonWithUid(outputPath, doc, uidLiteral);
+  const { results } = await transformVilDirectory({ config, runId });
+  for (const { inputPath, outputPath } of results) {
     await logDebug(
       "H2-file",
       "generate_vial_keymaps.js:193",
       "Processed file",
       {
-        file,
+        file: path.basename(inputPath),
         outputPath,
       },
       runId,
@@ -855,6 +864,11 @@ if (require.main === module) {
 
 module.exports = {
   main,
+  loadJsonWithUid,
+  saveJsonWithUid,
+  transformKeymapState,
+  transformVilFile,
+  transformVilDirectory,
   translateSymbol,
   extractAlphaFromKey,
   buildAliasMap,
