@@ -4,7 +4,8 @@ const fs = require('fs');
 const generator = require('./generate_vial_keymaps.js');
 const { fetchKeyboardDefinition } = require('./vial-fetch-definition.js');
 const { createDeviceTransport, createVitalyRunner, serializeKeymapState } = require('./device-transport.js');
-const { loadGeneratorConfig } = require('./workflow-utils.js');
+const { createFileAuthority, FileAuthorityError } = require('./file-authority.js');
+const configValidator = require('./config-validation.js');
 
 app.setName('KeymapSync');
 
@@ -104,6 +105,65 @@ let hasUnsavedChanges = false;
 let closePending = false;
 let allowWindowClose = false;
 const pendingSaveRequests = new Map();
+const fileAuthority = createFileAuthority();
+
+function parseAndValidateConfig(raw, source = 'configuration') {
+  const validator = configValidator;
+  if (typeof raw === 'string' && typeof validator.parseConfig === 'function') return validator.parseConfig(raw, source);
+  const config = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  if (typeof validator.assertValidConfig === 'function') {
+    validator.assertValidConfig(config, source);
+  } else if (typeof validator.validateConfig === 'function') {
+    const result = validator.validateConfig(config);
+    if (!result?.valid) {
+      const details = (result.issues || result.errors || []).map((issue) => issue.message || String(issue)).join('; ');
+      throw new Error(`Invalid ${source}${details ? `: ${details}` : '.'}`);
+    }
+  }
+  return config;
+}
+
+function assertPlainObject(value, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${label} must be an object.`);
+  }
+  return value;
+}
+
+function ipcWindow(event) {
+  const sender = event?.sender;
+  if (!sender || !mainWindow || sender.id !== mainWindow.webContents.id || sender.isDestroyed?.()) {
+    throw new FileAuthorityError('IPC sender is not the active application window.', 'UNTRUSTED_SENDER');
+  }
+  // Renderer code must run in the top-level isolated world, never in a child
+  // frame that happened to navigate under our window.
+  if (event.senderFrame && event.sender.mainFrame && event.senderFrame !== event.sender.mainFrame) {
+    throw new FileAuthorityError('IPC is only available to the main frame.', 'UNTRUSTED_FRAME');
+  }
+  if (event.senderFrame?.url && !event.senderFrame.url.startsWith('file://')) {
+    throw new FileAuthorityError('IPC is only available to the packaged application page.', 'UNTRUSTED_ORIGIN');
+  }
+  return sender;
+}
+
+function ownerFor(event) {
+  return ipcWindow(event).id;
+}
+
+function windowFor(event) {
+  ipcWindow(event);
+  return BrowserWindow.fromWebContents(event.sender) || mainWindow;
+}
+
+function writeFileAtomic(target, content) {
+  const temporary = `${target}.${process.pid}.${Math.random().toString(16).slice(2)}.tmp`;
+  try {
+    fs.writeFileSync(temporary, content, { encoding: 'utf8', mode: 0o600 });
+    fs.renameSync(temporary, target);
+  } finally {
+    try { if (fs.existsSync(temporary)) fs.unlinkSync(temporary); } catch { /* preserve original error */ }
+  }
+}
 
 function requestRendererSave(window) {
   const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -137,6 +197,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js')
     }
   });
+  const windowOwnerId = mainWindow.webContents.id;
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
@@ -187,6 +248,13 @@ function createWindow() {
       closePending = false;
     }
   });
+
+  mainWindow.on('closed', () => {
+    // Capabilities are session-scoped. A later window must not inherit paths
+    // selected by a previous renderer, even if Electron reuses its id.
+    fileAuthority.revokeOwner(windowOwnerId);
+    mainWindow = null;
+  });
 }
 
 app.whenReady().then(() => {
@@ -208,26 +276,48 @@ app.on('window-all-closed', () => {
   }
 });
 
-ipcMain.handle('app:defaults', () => defaultPaths);
+ipcMain.handle('app:defaults', (event) => {
+  const owner = ownerFor(event);
+  // Each workflow may initialize independently. Keep previously issued
+  // grants alive for the lifetime of the window so one workflow cannot
+  // invalidate another workflow's active configuration grant.
+  return {
+    config: fileAuthority.register(defaultPaths.config, {
+      owner, kind: 'config', operations: ['read', 'write']
+    }),
+    input: fileAuthority.register(defaultPaths.input, {
+      owner, kind: 'input', operations: ['read']
+    }),
+    output: fileAuthority.register(defaultPaths.output, {
+      owner, kind: 'output', operations: ['write']
+    }),
+  };
+});
 
-ipcMain.handle('app:setUnsavedChanges', (_event, hasChanges) => {
+ipcMain.handle('app:setUnsavedChanges', (event, hasChanges) => {
+  ipcWindow(event);
+  if (typeof hasChanges !== 'boolean') throw new TypeError('hasChanges must be a boolean.');
   hasUnsavedChanges = hasChanges;
 });
 
-ipcMain.on('app:save-before-quit-result', (_event, requestId, result) => {
+ipcMain.on('app:save-before-quit-result', (event, requestId, result) => {
+  try { ipcWindow(event); } catch { return; }
+  if (typeof requestId !== 'string' || !result || typeof result !== 'object') return;
   const resolve = pendingSaveRequests.get(requestId);
   if (!resolve) return;
   pendingSaveRequests.delete(requestId);
   resolve(result);
 });
 
-ipcMain.handle('device:discover', () => deviceTransport.discover());
-ipcMain.handle('device:snapshot', (_event, deviceId) => deviceTransport.snapshot(deviceId));
-ipcMain.handle('device:apply', (_event, deviceId, state) => deviceTransport.apply(deviceId, state));
-ipcMain.handle('device:lock', (_event, deviceId, locked) => deviceTransport.lock(deviceId, locked));
-ipcMain.handle('device:layout', (_event, deviceId) => deviceTransport.layout(deviceId));
+ipcMain.handle('device:discover', (event) => { ipcWindow(event); return deviceTransport.discover(); });
+ipcMain.handle('device:snapshot', (event, deviceId) => { ipcWindow(event); return deviceTransport.snapshot(deviceId); });
+ipcMain.handle('device:apply', (event, deviceId, state) => { ipcWindow(event); return deviceTransport.apply(deviceId, state); });
+ipcMain.handle('device:lock', (event, deviceId, locked) => { ipcWindow(event); return deviceTransport.lock(deviceId, locked); });
+ipcMain.handle('device:layout', (event, deviceId) => { ipcWindow(event); return deviceTransport.layout(deviceId); });
 
-ipcMain.handle('vial:fetchDefinition', async (_event, filter) => {
+ipcMain.handle('vial:fetchDefinition', async (event, filter) => {
+  ipcWindow(event);
+  if (filter !== undefined) assertPlainObject(filter, 'filter');
   try {
     return await fetchKeyboardDefinition(filter || {});
   } catch (err) {
@@ -235,77 +325,114 @@ ipcMain.handle('vial:fetchDefinition', async (_event, filter) => {
   }
 });
 
-ipcMain.handle('app:checkUnsavedChanges', () => {
+ipcMain.handle('app:checkUnsavedChanges', (event) => {
+  ipcWindow(event);
   return hasUnsavedChanges;
 });
 
-ipcMain.handle('dialog:select', async (_event, opts) => {
-  const properties = opts?.type === 'file' ? ['openFile'] : ['openDirectory'];
-  const result = await dialog.showOpenDialog(mainWindow, {
-    properties,
-    defaultPath: opts?.defaultPath
+ipcMain.handle('config:choose', async (event) => {
+  const owner = ownerFor(event);
+  const win = windowFor(event);
+  const result = await dialog.showOpenDialog(win, {
+    properties: ['openFile'],
+    filters: [{ name: 'JSON configuration', extensions: ['json'] }],
   });
   if (result.canceled || !result.filePaths?.length) return null;
-  return result.filePaths[0];
+  const target = result.filePaths[0];
+  let config;
+  try {
+    config = parseAndValidateConfig(fs.readFileSync(target, 'utf8'), target);
+  } catch (err) {
+    throw new Error(`Could not load configuration at ${target}: ${err.message}`);
+  }
+  return {
+    grant: fileAuthority.register(target, { owner, kind: 'config', operations: ['read', 'write'] }),
+    config,
+  };
 });
 
-ipcMain.handle('dialog:save', async (_event, opts) => {
-  const result = await dialog.showSaveDialog(mainWindow, {
-    defaultPath: opts?.defaultPath,
-    filters: opts?.filters
+ipcMain.handle('config:load', async (event, grantId) => {
+  const owner = ownerFor(event);
+  const grant = fileAuthority.resolve(grantId, { owner, kind: 'config', operation: 'read' });
+  try {
+    return {
+      grant: fileAuthority.publicGrant(grant),
+      config: parseAndValidateConfig(fs.readFileSync(grant.path, 'utf8'), grant.path),
+    };
+  } catch (err) {
+    throw new Error(`Could not load configuration at ${grant.path}: ${err.message}`);
+  }
+});
+
+ipcMain.handle('config:save', async (event, grantId, config) => {
+  const owner = ownerFor(event);
+  const grant = fileAuthority.resolve(grantId, { owner, kind: 'config', operation: 'write' });
+  const value = parseAndValidateConfig(config, grant.path);
+  writeFileAtomic(grant.path, JSON.stringify(value, null, 2));
+  return { grant: fileAuthority.publicGrant(grant), displayPath: grant.path };
+});
+
+ipcMain.handle('directory:choose', async (event, payload = {}) => {
+  const owner = ownerFor(event);
+  const opts = assertPlainObject(payload, 'directory selection');
+  if (!['input', 'output'].includes(opts.kind)) throw new FileAuthorityError('Directory kind must be input or output.', 'INVALID_KIND');
+  let defaultPath;
+  if (opts.currentGrantId !== undefined) {
+    defaultPath = fileAuthority.resolve(opts.currentGrantId, { owner, kind: opts.kind }).path;
+  }
+  const result = await dialog.showOpenDialog(windowFor(event), {
+    properties: ['openDirectory'],
+    defaultPath,
   });
-  if (result.canceled) return null;
-  return result.filePath;
+  if (result.canceled || !result.filePaths?.length) return null;
+  return fileAuthority.register(result.filePaths[0], {
+    owner, kind: opts.kind, operations: opts.kind === 'input' ? ['read'] : ['write']
+  });
 });
 
-ipcMain.handle('alpha:load', async (_event, filePath) => {
-  const target = filePath || defaultPaths.config;
-  const raw = fs.readFileSync(target, 'utf8');
-  return { path: target, content: raw };
+ipcMain.handle('vial:saveBackup', async (event, payload = {}) => {
+  ownerFor(event);
+  const opts = assertPlainObject(payload, 'backup');
+  if (typeof opts.suggestedName !== 'string' || !opts.suggestedName.trim()) throw new Error('A backup filename is required.');
+  if (!opts.state || typeof opts.state !== 'object' || Array.isArray(opts.state)) throw new Error('A valid keymap state is required.');
+  const result = await dialog.showSaveDialog(windowFor(event), {
+    // A basename prevents a renderer from smuggling an arbitrary destination
+    // into the dialog's initial location. The user still chooses the final path.
+    defaultPath: path.basename(opts.suggestedName),
+    filters: [{ name: 'Vial Layout', extensions: ['vil'] }],
+  });
+  if (result.canceled || !result.filePath) return null;
+  writeFileAtomic(result.filePath, serializeKeymapState(opts.state));
+  return { displayPath: result.filePath };
 });
 
-ipcMain.handle('alpha:save', async (_event, filePath, content) => {
-  const target = filePath || defaultPaths.config;
-  // Basic validation to avoid saving invalid JSON.
-  JSON.parse(content);
-  fs.writeFileSync(target, content, 'utf8');
-  return { path: target };
-});
-
-ipcMain.handle('vial:saveBackup', async (_event, filePath, state) => {
-  if (typeof filePath !== 'string' || !filePath) throw new Error('A backup file path is required.');
-  if (!state || typeof state !== 'object' || Array.isArray(state)) throw new Error('A valid keymap state is required.');
-  fs.writeFileSync(filePath, serializeKeymapState(state), 'utf8');
-  return { path: filePath };
-});
-
-ipcMain.handle('generator:process', async (_event, doc, config) => {
+ipcMain.handle('generator:process', async (event, doc, config) => {
+  ipcWindow(event);
+  assertPlainObject(config, 'config');
+  parseAndValidateConfig(config, 'configuration');
   return generator.transformKeymapState(doc, config);
 });
 
-ipcMain.handle('generator:run', async (_event, opts = {}) => {
-  const log = (msg) => {
-    mainWindow?.webContents.send('log:data', msg + '\n');
-  };
+ipcMain.handle('generator:run', async (event, opts = {}) => {
+  const owner = ownerFor(event);
+  const payload = assertPlainObject(opts, 'generator options');
+  const configGrant = fileAuthority.resolve(payload.configGrant, { owner, kind: 'config', operation: 'read' });
+  const inputGrant = fileAuthority.resolve(payload.inputGrant, { owner, kind: 'input', operation: 'read' });
+  const outputGrant = fileAuthority.resolve(payload.outputGrant, { owner, kind: 'output', operation: 'write' });
+  const log = (msg) => event.sender.send('log:data', `${msg}\n`);
 
   try {
     log('Starting generator internally...');
-    const configPath = opts.config || defaultPaths.config;
-    const config = loadGeneratorConfig(configPath);
-    const inputDir = opts.input || defaultPaths.input;
-    if (!fs.existsSync(inputDir)) fs.mkdirSync(inputDir, { recursive: true });
+    const config = parseAndValidateConfig(fs.readFileSync(configGrant.path, 'utf8'), configGrant.path);
+    if (!fs.existsSync(outputGrant.path)) fs.mkdirSync(outputGrant.path, { recursive: true });
     const { results, warnings } = await generator.transformVilDirectory({
-      inputDir,
-      outputDir: opts.output || defaultPaths.output,
-      config
+      inputDir: inputGrant.path,
+      outputDir: outputGrant.path,
+      config,
     });
-
     log(`Processed ${results.length} file(s).`);
-    results.forEach(({ inputPath, outputPath }) => {
-      log(`Processed: ${path.basename(inputPath)} -> ${path.basename(outputPath)}`);
-    });
+    results.forEach(({ inputPath, outputPath }) => log(`Processed: ${path.basename(inputPath)} -> ${path.basename(outputPath)}`));
     warnings.forEach((warning) => log(`Warning: untranslated symbol ${warning}`));
-    
     log('Generator finished successfully.');
     return { code: 0 };
   } catch (err) {

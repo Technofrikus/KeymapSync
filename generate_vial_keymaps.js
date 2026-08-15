@@ -9,6 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const transformation = require('./gui-electron/generate_vial_keymaps.js');
+const { parseConfig } = require('./gui-electron/config-validation.js');
 
 const ROOT = __dirname;
 const INPUT_DIR = path.join(ROOT, 'original');
@@ -20,7 +21,7 @@ async function main() {
     throw new Error(`Config not found at ${CONFIG_PATH}`);
   }
 
-  const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  const config = parseConfig(fs.readFileSync(CONFIG_PATH, 'utf8'), CONFIG_PATH);
   const { results, warnings } = await transformation.transformVilDirectory({
     inputDir: INPUT_DIR,
     outputDir: OUTPUT_DIR,

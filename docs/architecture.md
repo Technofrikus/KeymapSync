@@ -4,7 +4,9 @@
 KeymapSync is a configuration management tool for Vial-compatible keyboards. It enables users to maintain unified character-to-symbol/number mappings across multiple keyboards.
 
 ## Main Modules
-- **GUI (Electron)**: Main process (`main.js`) manages lifecycle and IPC; Renderer process (`renderer.js`) handles UI orchestration. `keymap-presentation.js` prepares KLE geometry and renders keyboard previews.
+- **GUI (Electron)**: Main process (`main.js`) manages lifecycle and IPC. `renderer.js` composes separate editor, offline, and online workflow modules. `keymap-presentation.js` prepares KLE geometry and renders keyboard previews.
+- **Configuration validation (`config-validation.js`)**: Enforces the shared `alpha-layers.schema.json` structure and semantic invariants for CLI, offline, and online entry points.
+- **File authority (`file-authority.js`)**: Keeps user-selected paths in the main process behind opaque, owner-scoped grants; renderer IPC never supplies filesystem paths.
 - **Keymap State transformation module (`gui-electron/generate_vial_keymaps.js`)**: Shared logic for parsing `.vil` files, applying Alpha Mappings, preserving UIDs, and writing `_edited.vil` output. The root `generate_vial_keymaps.js` is its CLI adapter.
 - **Keyboard Interface (`vitaly`)**: Rust-based CLI tool (bundled binary) for direct keyboard communication (HID).
 - **Vial Integration (`vial-fetch-definition.js`)**: Fetches JSON definitions for specific keyboards from online/local sources.
@@ -20,12 +22,12 @@ KeymapSync is a configuration management tool for Vial-compatible keyboards. It 
 
 ## API Structure (IPC)
 - `device:*`: Device discovery, state snapshots, state application, locking, and layout info. The IPC handlers delegate all Vitaly-specific protocol details to `device-transport.js`.
-- `alpha:*`: Loading/saving `alpha_layers.json`.
+- `config:*` / `directory:*`: User-mediated configuration and directory grants, loading, and saving.
 - `generator:*`: Running the mapping logic.
 - `vial:*`: Fetching keyboard definitions.
 
 ## State Management
-- **Frontend**: `configObj` (current mapping config) and `currentDeviceState`/`targetDeviceState` for keyboards. `renderer.js` is currently the main UI workflow hotspot.
+- **Frontend**: `config-session.js` owns the active mapping configuration and dirty state. Editor, offline, and online workflows own their local UI state.
 - **Persistence**: `alpha_layers.json` (user config), `localStorage` (UI preferences like layout).
 
 ## Build/Deployment

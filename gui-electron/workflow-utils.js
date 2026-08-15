@@ -1,4 +1,5 @@
 const defaultFs = require('fs');
+const { parseConfig } = require('./config-validation');
 
 function loadGeneratorConfig(configPath, { fs = defaultFs } = {}) {
   if (typeof configPath !== 'string' || !configPath.trim()) {
@@ -14,10 +15,11 @@ function loadGeneratorConfig(configPath, { fs = defaultFs } = {}) {
   }
 
   try {
-    return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    return parseConfig(fs.readFileSync(configPath, 'utf8'), configPath);
   } catch (err) {
+    if (err && err.name === 'ConfigValidationError') throw err;
     throw new Error(`Could not read config at ${configPath}: ${err.message}`);
   }
 }
 
-module.exports = { loadGeneratorConfig };
+module.exports = { loadGeneratorConfig, parseConfig };

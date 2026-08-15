@@ -12,6 +12,7 @@ function copyIfExists(from, to) {
 function main() {
   const guiRoot = path.resolve(__dirname, '..');
   const repoRoot = path.resolve(guiRoot, '..');
+  const targetWindows = process.argv.includes('--win') || process.platform === 'win32';
 
   // Seed assets that must be present in the packaged app.
   copyIfExists(
@@ -20,11 +21,13 @@ function main() {
   );
 
   // Ensure vitaly exists for the current platform build.
-  execFileSync(process.execPath, [path.join(guiRoot, 'scripts', 'fetch-vitaly.js')], {
+  const fetchArgs = [path.join(guiRoot, 'scripts', 'fetch-vitaly.js')];
+  if (targetWindows) fetchArgs.push('--win');
+  execFileSync(process.execPath, fetchArgs, {
     stdio: 'inherit'
   });
 
-  const vitalyName = process.platform === 'win32' ? 'vitaly.exe' : 'vitaly';
+  const vitalyName = targetWindows ? 'vitaly.exe' : 'vitaly';
   const vitalyPath = path.join(guiRoot, 'bin', vitalyName);
   if (!fs.existsSync(vitalyPath)) {
     throw new Error(`Required vitaly binary missing after fetch: ${vitalyPath}`);
@@ -36,4 +39,3 @@ function main() {
 }
 
 main();
-

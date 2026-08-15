@@ -13,6 +13,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { assertValidConfig, parseConfig } = require("./config-validation");
 
 const ROOT = path.resolve(__dirname, "..");
 const INPUT_DIR = path.join(ROOT, "original");
@@ -665,6 +666,7 @@ function normalizeTapDanceKeycodesInDoc(doc, config) {
 }
 
 function transformKeymapState(keymapState, alphaMapping, runId = null) {
+  assertValidConfig(alphaMapping, "transformation config");
   const state = structuredClone(keymapState);
   const warnings = applyAlphaMappings(state, alphaMapping, runId);
   applyOverrides(state, alphaMapping, runId);
@@ -758,7 +760,7 @@ async function transformVilDirectory({ inputDir = INPUT_DIR, outputDir = OUTPUT_
 
 async function main() {
   if (!fs.existsSync(CONFIG_PATH)) throw new Error(`Config not found at ${CONFIG_PATH}`);
-  const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
+  const config = parseConfig(fs.readFileSync(CONFIG_PATH, "utf8"), CONFIG_PATH);
   await transformVilDirectory({ config });
 }
 

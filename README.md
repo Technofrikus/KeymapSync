@@ -18,7 +18,7 @@ Optional `mappingsVersion` in the config is reserved for future format evolution
 |------------|-------------|
 | **Batch `.vil` generation** | Read every `.vil` in `original/`, apply rules, write `*_edited.vil` to `output/` (originals unchanged). |
 | **CLI** | `node generate_vial_keymaps.js` from repo root (Node 18+). No npm dependencies for the generator. |
-| **Electron GUI** | Visual editor for alpha table, combos, and tap dances; configurable paths; logs; unsaved-change guard. |
+| **Electron GUI** | Visual editor for alpha table, combos, and tap dances; schema-validated configuration; configurable paths; logs; unsaved-change guard. |
 | **Layout sorting** | Editor can order keys as QWERTY, Dvorak, Colemak, or alphabetical—cosmetic only; rules are still keyed by letter. |
 | **Offline sync** | Run the same generation as the CLI from the app with chosen input/output folders. |
 | **Online sync** | Talk to a connected Vial keyboard over USB via [vitaly](https://github.com/bskaplou/vitaly): list devices, dump live JSON, merge preview, write back, optional EEPROM lock. stderr is interpreted so failures surface even when vitaly exits 0. |
@@ -34,6 +34,8 @@ Optional `mappingsVersion` in the config is reserved for future format evolution
 | `generate_vial_keymaps.js` | Command-line adapter for the shared transformation module in `gui-electron/`. |
 | `generate_vial_keymaps.test.js` | Regression checks for the shared transformation module. Run all GUI tests with `cd gui-electron && npm test`. |
 | `gui-electron/` | Electron app (`npm install`, `npm start`). |
+| `gui-electron/alpha-layers.schema.json` | Machine-readable configuration schema used alongside semantic validation. |
+| `docs/manual-electron-smoke-test.md` | Release checklist for backup, physical key overrides, selective apply, and close/save behavior. |
 
 ## `alpha_layers.json`
 
@@ -74,7 +76,9 @@ npm start
 2. **Offline sync** — Generate `.vil` files from configured folders.
 3. **Online sync** — Select a device, preview merged layout, apply to the keyboard, optionally lock.
 
-**Packaged builds** (see `package.json`): `npm run dist`, `npm run dist:mac`, `npm run dist:win` (Windows build runs `fetch-vitaly` first).
+Filesystem choices are represented in the renderer by opaque, window-scoped grants. Actual paths and file operations remain in Electron's main process.
+
+**Packaged builds** (see `package.json`): `npm run dist`, `npm run dist:mac`, `npm run dist:win`. Each platform-specific build stages the seed configuration and matching Vitaly binary first.
 
 ### vitaly (online sync)
 

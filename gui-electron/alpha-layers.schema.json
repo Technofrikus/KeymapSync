@@ -1,0 +1,182 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://keymapsync.dev/schemas/alpha-layers.schema.json",
+  "title": "KeymapSync alpha layer configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "mappingsVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "target": {
+      "$ref": "#/definitions/target"
+    },
+    "layers": {
+      "$ref": "#/definitions/layers"
+    },
+    "alphaMappings": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/alphaMapping"
+      }
+    },
+    "comboOverrides": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/comboOverride"
+      }
+    },
+    "tapDanceOverrides": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/tapDanceOverride"
+      }
+    },
+    "keyOverrideOverrides": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/keyOverrideOverride"
+      }
+    },
+    "comboOverrideExample": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/exampleValue"
+      }
+    },
+    "tapDanceOverrideExample": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/exampleValue"
+      }
+    },
+    "keyOverrideOverrideExample": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/exampleValue"
+      }
+    }
+  },
+  "required": [
+    "target",
+    "layers",
+    "alphaMappings"
+  ],
+  "definitions": {
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "language": {
+          "type": "string",
+          "enum": ["de", "fr", "es", "en"]
+        },
+        "os": {
+          "type": "string",
+          "enum": ["mac", "win", "linux"]
+        }
+      },
+      "required": ["language", "os"]
+    },
+    "layers": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "alpha": { "type": "integer", "minimum": 0 },
+        "symbol": { "type": "integer", "minimum": 0 },
+        "symbols": { "type": "integer", "minimum": 0 },
+        "number": { "type": "integer", "minimum": 0 },
+        "numbers": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["alpha"]
+    },
+    "alphaMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "layer1": { "$ref": "#/definitions/mappingValue" },
+        "layer2": { "$ref": "#/definitions/mappingValue" },
+        "base": { "$ref": "#/definitions/nullableKeycode" },
+        "aliases": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/keycode" }
+        }
+      },
+      "required": []
+    },
+    "mappingValue": {
+      "anyOf": [
+        { "type": "string" },
+        { "type": "null" }
+      ]
+    },
+    "nullableKeycode": {
+      "anyOf": [
+        { "$ref": "#/definitions/keycode" },
+        { "type": "null" }
+      ]
+    },
+    "keycode": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^\\S+$"
+    },
+    "keycodeOrEmpty": {
+      "type": "string",
+      "pattern": "^\\S*$"
+    },
+    "comboOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "keys": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": { "$ref": "#/definitions/keycode" }
+        },
+        "result": { "$ref": "#/definitions/keycode" }
+      },
+      "required": ["keys", "result"]
+    },
+    "tapDanceOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "trigger": { "$ref": "#/definitions/keycode" },
+        "tap": { "$ref": "#/definitions/keycode" },
+        "hold": { "$ref": "#/definitions/keycode" },
+        "doubleTap": { "$ref": "#/definitions/keycodeOrEmpty" },
+        "tapHold": { "$ref": "#/definitions/keycodeOrEmpty" },
+        "term": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        }
+      },
+      "required": ["name", "tap", "hold"]
+    },
+    "keyOverrideOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "trigger": { "$ref": "#/definitions/keycode" },
+        "replacement": { "$ref": "#/definitions/keycode" },
+        "layers": { "type": "integer", "minimum": 0 },
+        "trigger_mods": { "type": "integer", "minimum": 0 },
+        "negative_mod_mask": { "type": "integer", "minimum": 0 },
+        "suppressed_mods": { "type": "integer", "minimum": 0 },
+        "options": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["trigger", "replacement"]
+    },
+    "exampleValue": {
+      "type": "object"
+    }
+  }
+}

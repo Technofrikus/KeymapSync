@@ -48,7 +48,7 @@ jobs:
           else
             BUILD_VERSION="$(node -p "require('./package.json').version")"
           fi
-          node scripts/fetch-vitaly.js
+          node scripts/prep-dist.js
           npx electron-builder --mac --publish never --config.extraMetadata.version="${BUILD_VERSION}"
 
       - name: Smoke check macOS bundle contents
@@ -63,7 +63,19 @@ jobs:
           const { execFileSync } = require('child_process');
           const asarPath = process.env.ASAR_PATH;
           const out = execFileSync('npx', ['asar', 'list', asarPath], { encoding: 'utf8' });
-          const mustContain = ['kle-parser.js', 'keycode-mapping.js', 'kle-rect-union.js', 'renderer.js'];
+          const mustContain = [
+            'kle-parser.js',
+            'keycode-mapping.js',
+            'kle-rect-union.js',
+            'renderer.js',
+            'config-session.js',
+            'editor-workflow.js',
+            'offline-workflow.js',
+            'online-workflow.js',
+            'config-validation.js',
+            'alpha-layers.schema.json',
+            'file-authority.js'
+          ];
           const missing = mustContain.filter((f) => !out.includes(f));
           if (missing.length) {
             throw new Error(`Missing files in macOS app.asar: ${missing.join(', ')}`);
@@ -113,7 +125,7 @@ jobs:
           else
             BUILD_VERSION="$(node -p "require('./package.json').version")"
           fi
-          node scripts/fetch-vitaly.js --win
+          node scripts/prep-dist.js
           npx electron-builder --win --x64 --publish never --config.extraMetadata.version="${BUILD_VERSION}"
 
       - name: Smoke check Windows bundle contents
@@ -154,7 +166,19 @@ jobs:
             paths: [process.cwd()]
           });
           const out = execFileSync(process.execPath, [asarCli, 'list', asarPath], { encoding: 'utf8' });
-          const mustContain = ['kle-parser.js', 'keycode-mapping.js', 'kle-rect-union.js', 'renderer.js'];
+          const mustContain = [
+            'kle-parser.js',
+            'keycode-mapping.js',
+            'kle-rect-union.js',
+            'renderer.js',
+            'config-session.js',
+            'editor-workflow.js',
+            'offline-workflow.js',
+            'online-workflow.js',
+            'config-validation.js',
+            'alpha-layers.schema.json',
+            'file-authority.js'
+          ];
           const missing = mustContain.filter((f) => !out.includes(f));
           if (missing.length) {
             throw new Error(`Missing files in Windows app.asar: ${missing.join(', ')}`);

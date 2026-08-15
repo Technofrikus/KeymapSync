@@ -16,7 +16,10 @@
 
 ## Quick Start Nav
 - `gui-electron/main.js`: Electron lifecycle and IPC composition.
-- `gui-electron/renderer.js`: UI workflow and renderer state (a high-change module).
+- `gui-electron/renderer.js`: Renderer composition and navigation.
+- `gui-electron/editor-workflow.js`, `offline-workflow.js`, `online-workflow.js`: Workflow-owned UI state and orchestration.
+- `gui-electron/config-validation.js`: Shared configuration validation.
+- `gui-electron/file-authority.js`: Main-process filesystem grants; renderer code must never pass raw paths.
 - `gui-electron/generate_vial_keymaps.js`: Shared Keymap State transformation and `.vil` persistence.
 - `gui-electron/device-transport.js`: Vitaly-backed device operations.
 - `alpha_layers.json`: Data schema for character mappings.

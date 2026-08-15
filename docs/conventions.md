@@ -6,6 +6,7 @@
 
 ## Architecture Patterns
 - **IPC-first**: The main process composes filesystem and child-process capabilities behind `ipcMain.handle`; dedicated modules own transformation and Vitaly protocol details.
+- **Opaque file grants**: Renderer code passes owner-scoped grant ids, never raw filesystem paths. Dialog selection and path resolution stay in the main process.
 - **Data-Driven**: Keyboard behavior is defined by JSON (`alpha_layers.json`, `.vil`).
 
 ## Error Handling
@@ -28,5 +29,6 @@
 - **Don't hardcode vitaly paths or command details**: use the device transport composed by `main.js`.
 
 ## Test Strategy
-- Node/assert regression scripts cover transformation, device transport, and basic keyboard presentation behavior. Run `cd gui-electron && npm test`.
+- Node/assert regression scripts cover validation, file authority, transformation, device transport, and keyboard presentation behavior. Run `cd gui-electron && npm test`.
+- Run `docs/manual-electron-smoke-test.md` with a physical keyboard before releases that change IPC, backup, apply, or close/save behavior.
 - Manually verify layout diffs in the "Online Sync" preview.

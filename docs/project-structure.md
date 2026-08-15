@@ -5,7 +5,11 @@
     - Main application logic (Electron).
     - `main.js`: Main process; manages window and IPC.
     - `device-transport.js`: Vitaly-backed device discovery, snapshot, apply, lock, and layout operations.
-    - `renderer.js`: UI logic, diffing, and user interaction.
+    - `renderer.js`: Small composition root and navigation.
+    - `config-session.js`: Active configuration grant, state, dirty tracking, and save/reload transitions.
+    - `editor-workflow.js`, `offline-workflow.js`, `online-workflow.js`: Renderer workflow modules.
+    - `config-validation.js`, `alpha-layers.schema.json`: Shared configuration validation.
+    - `file-authority.js`: Main-process capability registry for user-selected filesystem access.
     - `keymap-presentation.js`: Keyboard-preview layout preparation and rendering.
     - `preload.js`: IPC bridge between Main and Renderer.
     - `bin/`: Stores OS-specific `vitaly` binaries (development/distribution).
@@ -27,7 +31,7 @@
 - **Generator Logic**: `gui-electron/generate_vial_keymaps.js` is the shared Keymap State transformation module. Root `generate_vial_keymaps.js` is the CLI adapter; both use `alpha_layers.json` from the project root.
 
 ## Hot Paths
-- `gui-electron/renderer.js`: Most active UI changes happen here.
+- `gui-electron/editor-workflow.js`, `offline-workflow.js`, `online-workflow.js`: UI changes are localized by workflow.
 - `gui-electron/main.js`: Electron lifecycle and IPC composition.
 - `gui-electron/generate_vial_keymaps.js`: Heart of the shared data transformation.
 - `gui-electron/device-transport.js`: Vitaly protocol and device I/O.

@@ -2,11 +2,11 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
   getDefaults: () => ipcRenderer.invoke('app:defaults'),
-  selectPath: (opts) => ipcRenderer.invoke('dialog:select', opts),
-  savePath: (opts) => ipcRenderer.invoke('dialog:save', opts),
-  loadAlpha: (filePath) => ipcRenderer.invoke('alpha:load', filePath),
-  saveAlpha: (filePath, content) => ipcRenderer.invoke('alpha:save', filePath, content),
-  saveVilBackup: (filePath, state) => ipcRenderer.invoke('vial:saveBackup', filePath, state),
+  chooseConfig: () => ipcRenderer.invoke('config:choose'),
+  loadConfig: (grantId) => ipcRenderer.invoke('config:load', grantId),
+  saveConfig: (grantId, config) => ipcRenderer.invoke('config:save', grantId, config),
+  chooseDirectory: (kind, currentGrantId) => ipcRenderer.invoke('directory:choose', { kind, currentGrantId }),
+  saveVilBackup: (payload) => ipcRenderer.invoke('vial:saveBackup', payload),
   runGenerator: (opts) => ipcRenderer.invoke('generator:run', opts),
   processConfig: (doc, config) => ipcRenderer.invoke('generator:process', doc, config),
   setUnsavedChanges: (hasChanges) => ipcRenderer.invoke('app:setUnsavedChanges', hasChanges),
