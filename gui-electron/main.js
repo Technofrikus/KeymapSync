@@ -12,19 +12,11 @@ const isDev = !app.isPackaged;
 // Enable hot reload in development
 if (isDev) {
   try {
-    // Find Electron binary path
-    const electronModulePath = require.resolve('electron');
-    const electronDir = path.dirname(electronModulePath);
-    let electronPath;
-    
-    if (process.platform === 'darwin') {
-      electronPath = path.join(electronDir, 'dist', 'Electron.app', 'Contents', 'MacOS', 'Electron');
-    } else if (process.platform === 'win32') {
-      electronPath = path.join(electronDir, 'dist', 'electron.exe');
-    } else {
-      electronPath = path.join(electronDir, 'dist', 'electron');
-    }
-    
+    // This is the running Electron binary on every platform. Deriving it from
+    // the `electron` package assumes a particular package layout and can point
+    // electron-reload at a path that does not exist.
+    const electronPath = process.execPath;
+
     require('electron-reload')(__dirname, {
       electron: electronPath,
       hardResetMethod: 'exit'
@@ -468,4 +460,3 @@ ipcMain.handle('generator:run', async (_event, opts = {}) => {
     return { code: 1, error: err.message };
   }
 });
-
