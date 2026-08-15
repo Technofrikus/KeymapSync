@@ -6,18 +6,19 @@
 - **QMK/Vial** (Keyboard firmware protocols)
 
 ## Architecture
-- **Offline**: CLI/Batch mode (`generate_vial_keymaps.js`).
-- **Online**: HID interaction via `vitaly` IPC calls from `main.js`.
+- **Offline**: The root `generate_vial_keymaps.js` CLI adapter invokes the shared transformation module at `gui-electron/generate_vial_keymaps.js`.
+- **Online**: `main.js` exposes IPC handlers, while `device-transport.js` owns the Vitaly command protocol.
 
 ## Critical Rules (Do/Don't)
 - **DO NOT** use `JSON.parse` on `.vil` files directly if they contain a `uid`. Use `loadJsonWithUid` in `generate_vial_keymaps.js`.
 - **DO** verify keycodes using `keycode-mapping.js`.
-- **DO** run `vitaly` through `runVitaly` in `main.js` to ensure proper binary path resolution.
+- **DO** use `createDeviceTransport` in `device-transport.js` for Vitaly operations; `main.js` supplies the process and path dependencies.
 
 ## Quick Start Nav
-- `gui-electron/main.js`: Start here for IPC/App logic.
-- `gui-electron/renderer.js`: UI/Visual logic.
-- `generate_vial_keymaps.js`: Mapping transformation logic.
+- `gui-electron/main.js`: Electron lifecycle and IPC composition.
+- `gui-electron/renderer.js`: UI workflow and renderer state (a high-change module).
+- `gui-electron/generate_vial_keymaps.js`: Shared Keymap State transformation and `.vil` persistence.
+- `gui-electron/device-transport.js`: Vitaly-backed device operations.
 - `alpha_layers.json`: Data schema for character mappings.
 
 ## Relevant Documents
@@ -31,4 +32,8 @@
 ## If you want to change X, check Y first:
 - **Change Mappings**: Check `alpha_layers.json` schema.
 - **Add Keycode**: Check `keycode-mapping.js`.
-- **Add Translation**: Check `translationTables` in `generate_vial_keymaps.js`.
+- **Add Translation**: Check `translationTables` in `gui-electron/generate_vial_keymaps.js`.
+
+## Verification
+
+From `gui-electron/`, run `npm test`. It executes the transformation, device transport, and keyboard-presentation regression scripts.

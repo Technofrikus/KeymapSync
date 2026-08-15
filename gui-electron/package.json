@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "test": "node ../generate_vial_keymaps.test.js && node device-transport.test.js && node keymap-presentation.test.js && node workflow-utils.test.js",
     "dist": "electron-builder --publish never",
     "dist:mac": "electron-builder --mac --publish never",
     "dist:win": "node scripts/fetch-vitaly.js --win && electron-builder --win --x64 --publish never",

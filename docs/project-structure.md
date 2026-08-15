@@ -28,8 +28,9 @@
 
 ## Hot Paths
 - `gui-electron/renderer.js`: Most active UI changes happen here.
-- `gui-electron/main.js`: Core IPC and process management.
-- `generate_vial_keymaps.js`: Heart of the data transformation.
+- `gui-electron/main.js`: Electron lifecycle and IPC composition.
+- `gui-electron/generate_vial_keymaps.js`: Heart of the shared data transformation.
+- `gui-electron/device-transport.js`: Vitaly protocol and device I/O.
 
 ## Naming Conventions
 - `.vil`: Vial Layout files (JSON format).

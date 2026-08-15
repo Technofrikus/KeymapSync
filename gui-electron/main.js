@@ -3,7 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const generator = require('./generate_vial_keymaps.js');
 const { fetchKeyboardDefinition } = require('./vial-fetch-definition.js');
-const { createDeviceTransport, createVitalyRunner } = require('./device-transport.js');
+const { createDeviceTransport, createVitalyRunner, serializeKeymapState } = require('./device-transport.js');
+const { loadGeneratorConfig } = require('./workflow-utils.js');
 
 app.setName('KeymapSync');
 
@@ -99,8 +100,29 @@ const deviceTransport = createDeviceTransport({
 });
 
 let mainWindow;
+let hasUnsavedChanges = false;
+let closePending = false;
+let allowWindowClose = false;
+const pendingSaveRequests = new Map();
+
+function requestRendererSave(window) {
+  const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      pendingSaveRequests.delete(requestId);
+      resolve({ ok: false, error: 'Saving did not receive a response from the editor.' });
+    }, 30000);
+    pendingSaveRequests.set(requestId, (result) => {
+      clearTimeout(timeout);
+      resolve(result || { ok: false, error: 'Saving failed without a result.' });
+    });
+    window.webContents.send('app:save-before-quit', requestId);
+  });
+}
 
 function createWindow() {
+  allowWindowClose = false;
+  closePending = false;
   mainWindow = new BrowserWindow({
     width: 1100,
     height: 800,
@@ -110,6 +132,8 @@ function createWindow() {
     icon: path.join(__dirname, 'KSiconReal.png'),
     webPreferences: {
       contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
       preload: path.join(__dirname, 'preload.js')
     }
   });
@@ -125,9 +149,12 @@ function createWindow() {
   
   // Handle window close to check for unsaved changes
   mainWindow.on('close', async (event) => {
-    if (hasUnsavedChanges) {
-      event.preventDefault();
+    if (allowWindowClose || !hasUnsavedChanges) return;
+    event.preventDefault();
+    if (closePending) return;
+    closePending = true;
       
+    try {
       const response = await dialog.showMessageBox(mainWindow, {
         type: 'question',
         buttons: ['Save', 'Don\'t Save', 'Cancel'],
@@ -139,19 +166,25 @@ function createWindow() {
       });
       
       if (response.response === 0) {
-        // Save
-        mainWindow.webContents.send('app:save-before-quit');
-        // Wait for save to complete, then close
-        setTimeout(() => {
+        const saveResult = await requestRendererSave(mainWindow);
+        if (saveResult.ok) {
           hasUnsavedChanges = false;
-          mainWindow.destroy();
-        }, 1000);
+          allowWindowClose = true;
+          mainWindow.close();
+        } else {
+          await dialog.showMessageBox(mainWindow, {
+            type: 'error',
+            title: 'Changes Not Saved',
+            message: saveResult.error || 'The configuration could not be saved. The window will remain open.',
+          });
+        }
       } else if (response.response === 1) {
-        // Don't save
         hasUnsavedChanges = false;
-        mainWindow.destroy();
+        allowWindowClose = true;
+        mainWindow.close();
       }
-      // If response is 2 (Cancel), do nothing - window won't close
+    } finally {
+      closePending = false;
     }
   });
 }
@@ -169,8 +202,6 @@ app.whenReady().then(() => {
   });
 });
 
-let hasUnsavedChanges = false;
-
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
@@ -181,6 +212,13 @@ ipcMain.handle('app:defaults', () => defaultPaths);
 
 ipcMain.handle('app:setUnsavedChanges', (_event, hasChanges) => {
   hasUnsavedChanges = hasChanges;
+});
+
+ipcMain.on('app:save-before-quit-result', (_event, requestId, result) => {
+  const resolve = pendingSaveRequests.get(requestId);
+  if (!resolve) return;
+  pendingSaveRequests.delete(requestId);
+  resolve(result);
 });
 
 ipcMain.handle('device:discover', () => deviceTransport.discover());
@@ -234,6 +272,13 @@ ipcMain.handle('alpha:save', async (_event, filePath, content) => {
   return { path: target };
 });
 
+ipcMain.handle('vial:saveBackup', async (_event, filePath, state) => {
+  if (typeof filePath !== 'string' || !filePath) throw new Error('A backup file path is required.');
+  if (!state || typeof state !== 'object' || Array.isArray(state)) throw new Error('A valid keymap state is required.');
+  fs.writeFileSync(filePath, serializeKeymapState(state), 'utf8');
+  return { path: filePath };
+});
+
 ipcMain.handle('generator:process', async (_event, doc, config) => {
   return generator.transformKeymapState(doc, config);
 });
@@ -245,17 +290,12 @@ ipcMain.handle('generator:run', async (_event, opts = {}) => {
 
   try {
     log('Starting generator internally...');
-    // We can call generator.main() but it uses hardcoded paths.
-    // Let's use the logic from generator.main but with our paths.
-    
-    if (!fs.existsSync(defaultPaths.config)) {
-      throw new Error(`Config not found at ${defaultPaths.config}`);
-    }
-    
-    if (!fs.existsSync(defaultPaths.input)) fs.mkdirSync(defaultPaths.input, { recursive: true });
-    const config = JSON.parse(fs.readFileSync(defaultPaths.config, 'utf8'));
+    const configPath = opts.config || defaultPaths.config;
+    const config = loadGeneratorConfig(configPath);
+    const inputDir = opts.input || defaultPaths.input;
+    if (!fs.existsSync(inputDir)) fs.mkdirSync(inputDir, { recursive: true });
     const { results, warnings } = await generator.transformVilDirectory({
-      inputDir: opts.input || defaultPaths.input,
+      inputDir,
       outputDir: opts.output || defaultPaths.output,
       config
     });

@@ -158,13 +158,21 @@ const keymapPresentation = window.KeymapPresentation;
 const getMatrixCell = keymapPresentation.getMatrixCell;
 const isTransparentKeycode = keymapPresentation.isTransparentKeycode;
 
-function escapeHtml(s) {
-  if (s == null || s === undefined) return '';
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+function clearElement(element) {
+  element.replaceChildren();
+}
+
+function appendTextElement(parent, tagName, className, text) {
+  const element = document.createElement(tagName);
+  if (className) element.className = className;
+  element.textContent = text;
+  parent.appendChild(element);
+  return element;
+}
+
+function renderEmptyState(parent, message, className = 'empty-state') {
+  clearElement(parent);
+  appendTextElement(parent, 'div', className, message);
 }
 
 function renderKeyboardLayout(state, targetEl, layerIdx = 0, targetState = null) {
@@ -179,7 +187,7 @@ function renderKeyboardLayout(state, targetEl, layerIdx = 0, targetState = null)
 }
 
 async function refreshDevices() {
-  deviceList.innerHTML = '<div class="empty-state">Searching for keyboards...</div>';
+  renderEmptyState(deviceList, 'Searching for keyboards...');
   onlineSyncPanel.classList.add('hidden');
   layoutVisualization.classList.add('hidden');
   selectedDevice = null;
@@ -189,7 +197,7 @@ async function refreshDevices() {
     const devices = await window.api.device.discover();
     
     if (!devices || devices.length === 0) {
-      deviceList.innerHTML = '<div class="empty-state">No Vial keyboards found.</div>';
+      renderEmptyState(deviceList, 'No Vial keyboards found.');
       return;
     }
     
@@ -200,20 +208,18 @@ async function refreshDevices() {
       return nameA.localeCompare(nameB);
     });
     
-    deviceList.innerHTML = '';
+    clearElement(deviceList);
     devices.forEach(dev => {
       const card = document.createElement('div');
       card.className = 'device-card';
       const id = `${dev.vendor_id}:${dev.product_id}`;
-      card.innerHTML = `
-        <div class="device-name">${dev.product_name || 'Unknown Keyboard'}</div>
-        <div class="device-meta">ID: ${id} | SN: ${dev.serial_number || 'N/A'}</div>
-      `;
+      appendTextElement(card, 'div', 'device-name', dev.product_name || 'Unknown Keyboard');
+      appendTextElement(card, 'div', 'device-meta', `ID: ${id} | SN: ${dev.serial_number || 'N/A'}`);
       card.addEventListener('click', () => selectDevice(dev, card));
       deviceList.appendChild(card);
     });
   } catch (err) {
-    deviceList.innerHTML = `<div class="empty-state">Error during search: ${err.message}</div>`;
+    renderEmptyState(deviceList, `Error during search: ${err.message}`);
   }
 }
 
@@ -230,11 +236,10 @@ async function selectDevice(device, cardEl) {
   layoutVisualization.classList.add('hidden');
   
   // Update capabilities tags
-  deviceCapabilities.innerHTML = `
-    <span class="cap-tag supported">Keys (${device.layers || 0} Layers)</span>
-    <span class="cap-tag ${device.has_combos ? 'supported' : ''}">Combos</span>
-    <span class="cap-tag ${device.has_tap_dance ? 'supported' : ''}">TapDance</span>
-  `;
+  clearElement(deviceCapabilities);
+  appendTextElement(deviceCapabilities, 'span', 'cap-tag supported', `Keys (${device.layers || 0} Layers)`);
+  appendTextElement(deviceCapabilities, 'span', `cap-tag ${device.has_combos ? 'supported' : ''}`, 'Combos');
+  appendTextElement(deviceCapabilities, 'span', `cap-tag ${device.has_tap_dance ? 'supported' : ''}`, 'TapDance');
   
   // Disable options if not supported
   const syncCombos = document.getElementById('syncCombos');
@@ -284,37 +289,32 @@ async function selectDevice(device, cardEl) {
             keyboardLayoutGeometry.layoutOptionsMap,
           )
         : '';
-      deviceCapabilities.innerHTML += `
-        <div class="layout-options-info">
-          <span class="label">Layout options (saved on keyboard):</span>
-          <span class="value">${escapeHtml((keyboardLayoutGeometry && keyboardLayoutGeometry.summary) || 'Default')}</span>
-        </div>
-        <div class="layout-options-info subtle">
-          <span class="label">Layout debug:</span>
-          <span class="value">${escapeHtml(debugInfo)}</span>
-        </div>
-        ${
-          keyboardLayoutGeometry && keyboardLayoutGeometry.fallbackApplied
-            ? `<div class="layout-options-info subtle"><span class="label">KLE:</span> <span class="value">Using layout option 0 for each layout group (fallback — saved layout_options may not have matched this definition).</span></div>`
-            : ''
-        }
-      `;
+      const appendInfo = (className, label, value) => {
+        const info = document.createElement('div');
+        info.className = className;
+        appendTextElement(info, 'span', 'label', label);
+        appendTextElement(info, 'span', 'value', value);
+        deviceCapabilities.appendChild(info);
+      };
+      appendInfo('layout-options-info', 'Layout options (saved on keyboard):', (keyboardLayoutGeometry && keyboardLayoutGeometry.summary) || 'Default');
+      appendInfo('layout-options-info subtle', 'Layout debug:', debugInfo);
+      if (keyboardLayoutGeometry && keyboardLayoutGeometry.fallbackApplied) {
+        appendInfo('layout-options-info subtle', 'KLE:', 'Using layout option 0 for each layout group (fallback — saved layout_options may not have matched this definition).');
+      }
     } else if (defRes && defRes.error) {
-      deviceCapabilities.innerHTML += `
-        <div class="layout-options-info warn">
-          <span class="label">KLE geometry:</span>
-          <span class="value">${escapeHtml(defRes.error)} — using matrix view.</span>
-        </div>
-      `;
+      const info = document.createElement('div');
+      info.className = 'layout-options-info warn';
+      appendTextElement(info, 'span', 'label', 'KLE geometry:');
+      appendTextElement(info, 'span', 'value', `${defRes.error} — using matrix view.`);
+      deviceCapabilities.appendChild(info);
     }
 
     if (layoutInfo) {
-      deviceCapabilities.innerHTML += `
-        <div class="layout-options-info subtle">
-          <span class="label">vitaly layout:</span>
-          <span class="value">${escapeHtml(layoutInfo)}</span>
-        </div>
-      `;
+      const info = document.createElement('div');
+      info.className = 'layout-options-info subtle';
+      appendTextElement(info, 'span', 'label', 'vitaly layout:');
+      appendTextElement(info, 'span', 'value', layoutInfo);
+      deviceCapabilities.appendChild(info);
     }
 
     renderKeyboardLayout(currentDeviceState, layoutGrid);
@@ -331,7 +331,7 @@ async function previewOnlineSync() {
   previewOnlineSyncBtn.disabled = true;
   onlineStatus.textContent = 'Reading keyboard configuration...';
   syncPreview.classList.add('hidden');
-  previewLayouts.innerHTML = '';
+  clearElement(previewLayouts);
   
   try {
     // 1. Read current state
@@ -359,7 +359,7 @@ async function previewOnlineSync() {
       sortedLayers.forEach(idx => {
         const layerSection = document.createElement('div');
         layerSection.className = 'preview-layer-section';
-        layerSection.innerHTML = `<h4>Layer ${idx}</h4>`;
+        appendTextElement(layerSection, 'h4', '', `Layer ${idx}`);
         const gridContainer = document.createElement('div');
         gridContainer.className = 'layout-grid';
         renderKeyboardLayout(currentDeviceState, gridContainer, idx, targetDeviceState);
@@ -382,7 +382,8 @@ function calculateDiff(current, target) {
   const diffs = {
     keys: [],
     combos: [],
-    tapdance: []
+    tapdance: [],
+    keyOverrides: []
   };
   
   // Compare Keys (layers) - Use target layout length to catch new layers
@@ -464,15 +465,34 @@ function calculateDiff(current, target) {
       }
     }
   }
+
+  // Compare key overrides. These are Vial objects, so preserve their full
+  // JSON representation in the preview instead of guessing a display format.
+  if (current.key_override || target.key_override) {
+    const currentOverrides = current.key_override || [];
+    const targetOverrides = target.key_override || [];
+    const maxLen = Math.max(currentOverrides.length, targetOverrides.length);
+    for (let i = 0; i < maxLen; i++) {
+      const from = currentOverrides[i];
+      const to = targetOverrides[i];
+      if (JSON.stringify(from) !== JSON.stringify(to)) {
+        diffs.keyOverrides.push({
+          idx: i,
+          from: from ? JSON.stringify(from) : 'Empty',
+          to: to ? JSON.stringify(to) : 'Empty',
+        });
+      }
+    }
+  }
   
   return diffs;
 }
 
 function renderDiff(diff) {
-  previewDiff.innerHTML = '';
+  clearElement(previewDiff);
 
-  if (diff.keys.length === 0 && diff.combos.length === 0 && diff.tapdance.length === 0) {
-    previewDiff.innerHTML = '<div class="no-changes">No changes required. Keyboard is already up to date.</div>';
+  if (diff.keys.length === 0 && diff.combos.length === 0 && diff.tapdance.length === 0 && diff.keyOverrides.length === 0) {
+    appendTextElement(previewDiff, 'div', 'no-changes', 'No changes required. Keyboard is already up to date.');
     return;
   }
 
@@ -483,38 +503,33 @@ function renderDiff(diff) {
   details.className = 'diff-details';
   const summary = document.createElement('summary');
   summary.className = 'diff-summary-sticky';
-  summary.textContent = `Detailed list (${diff.keys.length + diff.combos.length + diff.tapdance.length} changes) — click to expand/collapse`;
+  summary.textContent = `Detailed list (${diff.keys.length + diff.combos.length + diff.tapdance.length + diff.keyOverrides.length} changes) — click to expand/collapse`;
   details.appendChild(summary);
 
   const content = document.createElement('div');
   content.className = 'diff-content diff-content-scroll';
 
-  let html = '';
-
-  if (diff.keys.length > 0) {
-    html += `<strong>Keys (${diff.keys.length} changes):</strong>\n`;
-    diff.keys.forEach((d) => {
-      html += `<span class="diff-loc">${d.loc}:</span> <span class="diff-old">${keycodeToChar(d.from)}</span> -> <span class="diff-new">${keycodeToChar(d.to)}</span>\n`;
+  const pre = document.createElement('pre');
+  const appendSection = (title, entries, formatter) => {
+    if (!entries.length) return;
+    appendTextElement(pre, 'strong', '', `${title} (${entries.length} changes):`);
+    pre.appendChild(document.createTextNode('\n'));
+    entries.forEach((entry) => {
+      const { location, from, to } = formatter(entry);
+      appendTextElement(pre, 'span', 'diff-loc', `${location}:`);
+      pre.appendChild(document.createTextNode(' '));
+      appendTextElement(pre, 'span', 'diff-old', from);
+      pre.appendChild(document.createTextNode(' -> '));
+      appendTextElement(pre, 'span', 'diff-new', to);
+      pre.appendChild(document.createTextNode('\n'));
     });
-    html += '\n';
-  }
-
-  if (diff.combos.length > 0) {
-    html += `<strong>Combos (${diff.combos.length} changes):</strong>\n`;
-    diff.combos.forEach((d) => {
-      html += `<span class="diff-loc">Slot ${d.idx}:</span> <span class="diff-old">${d.from}</span> -> <span class="diff-new">${d.to}</span>\n`;
-    });
-    html += '\n';
-  }
-
-  if (diff.tapdance.length > 0) {
-    html += `<strong>TapDance (${diff.tapdance.length} changes):</strong>\n`;
-    diff.tapdance.forEach((d) => {
-      html += `<span class="diff-loc">Slot ${d.idx}:</span> <span class="diff-old">${d.from}</span> -> <span class="diff-new">${d.to}</span>\n`;
-    });
-  }
-
-  content.innerHTML = `<pre>${html}</pre>`;
+    pre.appendChild(document.createTextNode('\n'));
+  };
+  appendSection('Keys', diff.keys, (d) => ({ location: d.loc, from: keycodeToChar(d.from), to: keycodeToChar(d.to) }));
+  appendSection('Combos', diff.combos, (d) => ({ location: `Slot ${d.idx}`, from: d.from, to: d.to }));
+  appendSection('TapDance', diff.tapdance, (d) => ({ location: `Slot ${d.idx}`, from: d.from, to: d.to }));
+  appendSection('Key Overrides', diff.keyOverrides, (d) => ({ location: `Slot ${d.idx}`, from: d.from, to: d.to }));
+  content.appendChild(pre);
   details.appendChild(content);
   panel.appendChild(details);
   previewDiff.appendChild(panel);
@@ -539,7 +554,7 @@ async function downloadBackup() {
     });
     
     if (filePath) {
-      await window.api.saveAlpha(filePath, JSON.stringify(currentDeviceState, null, 2));
+      await window.api.saveVilBackup(filePath, currentDeviceState);
       onlineStatus.textContent = `Backup saved: ${filePath}`;
     }
   } catch (err) {
@@ -558,20 +573,40 @@ async function runOnlineSync() {
   onlineStatus.textContent = 'Writing configuration...';
   
   try {
-    // Re-read firmware so macros/settings/combos match the device right before load (avoids stale preview state).
+    // Re-read and transform the current device state immediately before writing,
+    // so unrelated firmware settings are retained and the target is not stale.
     currentDeviceState = await window.api.device.snapshot(selectedDevice.id);
+    const transformation = await window.api.processConfig(currentDeviceState, configObj);
+    const freshTargetDeviceState = transformation.state;
+
+    const selectedSections = [
+      ['layout', document.getElementById('syncBaseKeys').checked],
+      ['combo', document.getElementById('syncCombos').checked],
+      ['tap_dance', document.getElementById('syncTapDance').checked],
+      ['key_override', document.getElementById('syncKeyOverrides').checked],
+    ];
+    const changedSincePreview = selectedSections.some(([section, selected]) => (
+      selected && JSON.stringify(targetDeviceState[section]) !== JSON.stringify(freshTargetDeviceState[section])
+    ));
+    if (changedSincePreview) {
+      onlineStatus.textContent = 'The keyboard changed since the preview. Please preview again before applying.';
+      return;
+    }
 
     // 1. Prepare data based on options
     const finalDoc = JSON.parse(JSON.stringify(currentDeviceState));
     
     if (document.getElementById('syncBaseKeys').checked) {
-      finalDoc.layout = targetDeviceState.layout;
+      finalDoc.layout = freshTargetDeviceState.layout;
     }
     if (document.getElementById('syncCombos').checked) {
-      finalDoc.combo = targetDeviceState.combo;
+      finalDoc.combo = freshTargetDeviceState.combo;
     }
     if (document.getElementById('syncTapDance').checked) {
-      finalDoc.tap_dance = targetDeviceState.tap_dance;
+      finalDoc.tap_dance = freshTargetDeviceState.tap_dance;
+    }
+    if (document.getElementById('syncKeyOverrides').checked) {
+      finalDoc.key_override = freshTargetDeviceState.key_override;
     }
     
     // 2. Apply
@@ -594,7 +629,8 @@ async function runOfflineSync() {
   offlineStatus.textContent = 'Sync in progress...';
   appendLog(`\n--- Offline Sync started ${new Date().toLocaleString()} ---\n`);
   try {
-    await saveConfigToFile();
+    const saveResult = await saveConfigToFile();
+    if (!saveResult.ok) throw new Error(saveResult.error || 'Configuration was not saved.');
     const result = await window.api.runGenerator({
       input: inputPath.value,
       output: outputPath.value,
@@ -617,10 +653,10 @@ function toggleDrawer(show) {
 }
 
 function renderTapdanceHelp() {
-  tapdanceList.innerHTML = '';
+  clearElement(tapdanceList);
   const list = configObj?.tapDanceOverrides || [];
   if (!list.length) {
-    tapdanceList.innerHTML = '<li>No Tap-Dance entries available.</li>';
+    appendTextElement(tapdanceList, 'li', '', 'No Tap-Dance entries available.');
     return;
   }
   list.forEach((td, idx) => {
@@ -790,7 +826,7 @@ function createTapDanceRow(td, index) {
 
 function renderTapDanceTable() {
   if (!tapDanceTableBody) return;
-  tapDanceTableBody.innerHTML = '';
+  clearElement(tapDanceTableBody);
   
   if (!configObj.tapDanceOverrides) {
     configObj.tapDanceOverrides = [];
@@ -1117,7 +1153,7 @@ function createComboRow(combo, index) {
 
 function renderComboTable() {
   if (!comboTableBody) return;
-  comboTableBody.innerHTML = '';
+  clearElement(comboTableBody);
   
   if (!configObj.comboOverrides) {
     configObj.comboOverrides = [];
@@ -1260,7 +1296,7 @@ function createCategoryHeader(label) {
 
 function renderGrid() {
   if (!configObj?.alphaMappings) return;
-  alphaTableBody.innerHTML = '';
+  clearElement(alphaTableBody);
 
   const { letters, special } = categorizeKeys(configObj.alphaMappings);
   const sortedLetters = sortLettersByLayout(letters, currentLayout);
@@ -1337,6 +1373,7 @@ async function loadConfig() {
     // Reset unsaved changes tracking
     lastSavedConfig = JSON.stringify(configObj, null, 2);
     hasUnsavedChanges = false;
+    window.api?.setUnsavedChanges(false);
     setStatus(configStatus, 'Config loaded');
   } catch (err) {
     setStatus(configStatus, `Error loading config: ${err.message}`);
@@ -1344,13 +1381,8 @@ async function loadConfig() {
 }
 
 function markAsChanged() {
-  // Check if there are actual changes
-  if (checkForChanges()) {
-    // Notify main process about unsaved changes
-    if (window.api?.setUnsavedChanges) {
-      window.api.setUnsavedChanges(true);
-    }
-  }
+  const changed = checkForChanges();
+  window.api?.setUnsavedChanges(changed);
 }
 
 function checkForChanges() {
@@ -1402,6 +1434,11 @@ function validateCombos() {
 }
 
 async function saveConfigToFile() {
+  if (!configObj || !currentConfigPath) {
+    const error = 'No configuration is loaded.';
+    setStatus(configStatus, error);
+    return { ok: false, error };
+  }
   try {
     // Validate combos before saving
     const validation = validateCombos();
@@ -1410,7 +1447,7 @@ async function saveConfigToFile() {
       setStatus(configStatus, `Validation error: ${errorMsg}`);
       // Still allow saving, but show warning
       if (!confirm(`Invalid keycodes found in combos:\n\n${validation.errors.join('\n')}\n\nSave anyway?`)) {
-        return;
+        return { ok: false, cancelled: true, error: 'Saving was cancelled after validation.' };
       }
     }
     
@@ -1423,8 +1460,10 @@ async function saveConfigToFile() {
       window.api.setUnsavedChanges(false);
     }
     setStatus(configStatus, validation.valid ? 'Config saved' : 'Config saved (with warnings)');
+    return { ok: true };
   } catch (err) {
     setStatus(configStatus, `Error saving: ${err.message}`);
+    return { ok: false, error: err.message || String(err) };
   }
 }
 
@@ -1523,7 +1562,7 @@ if (helpPanelResize) {
 // Listen for save-before-quit message from main process
 if (window.api?.onSaveBeforeQuit) {
   window.api.onSaveBeforeQuit(async () => {
-    await saveConfigToFile();
+    return saveConfigToFile();
   });
 }
 

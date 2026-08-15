@@ -227,7 +227,7 @@ function renderKeyboardLayout({
 }) {
   const layerExists = (state && state.layout && state.layout[layerIdx]) || (targetState && targetState.layout && targetState.layout[layerIdx]);
   if (!layerExists) {
-    targetEl.innerHTML = '<div class="empty-state">No layout data for this layer.</div>';
+    renderEmptyState(targetEl, 'No layout data for this layer.');
     return;
   }
   if (geometry && geometry.keys && geometry.keys.length) {
@@ -235,6 +235,18 @@ function renderKeyboardLayout({
     return;
   }
   renderMatrixFallbackLayout(state, targetEl, layerIdx, targetState, keycodeToChar);
+}
+
+function clearNode(node) {
+  node.replaceChildren();
+}
+
+function renderEmptyState(targetEl, message) {
+  clearNode(targetEl);
+  const emptyState = document.createElement('div');
+  emptyState.className = 'empty-state';
+  emptyState.textContent = message;
+  targetEl.appendChild(emptyState);
 }
 
 function rotatePoint(x, y, cx, cy, angleDeg) {
@@ -323,6 +335,19 @@ function setSvgDiffText(node, fromLabel, toLabel) {
   node.appendChild(mk(toLabel, 'new-label'));
 }
 
+function setHtmlDiffText(node, fromLabel, toLabel) {
+  clearNode(node);
+  const makeSpan = (text, className) => {
+    const span = document.createElement('span');
+    span.className = className;
+    span.textContent = text;
+    return span;
+  };
+  node.appendChild(makeSpan(fromLabel, 'old-label'));
+  node.appendChild(makeSpan('→', 'arrow'));
+  node.appendChild(makeSpan(toLabel, 'new-label'));
+}
+
 function wrapLabelLines(rawText) {
   const text = String(rawText || '').trim();
   if (!text) return [''];
@@ -368,13 +393,13 @@ function setSvgWrappedText(node, text, widthPx) {
 }
 
 function renderKleKeyboardLayout(state, targetEl, layerIdx, targetState, geom, keycodeToChar) {
-  targetEl.innerHTML = '';
+  clearNode(targetEl);
   const wrap = document.createElement('div');
   wrap.className = 'keyboard-layout-container kle-keyboard-wrap';
 
   const keys = geom && Array.isArray(geom.keys) ? geom.keys : [];
   if (!keys.length) {
-    targetEl.innerHTML = '<div class="empty-state">No KLE geometry to display.</div>';
+    renderEmptyState(targetEl, 'No KLE geometry to display.');
     return;
   }
 
@@ -528,10 +553,10 @@ function renderKleKeyboardLayout(state, targetEl, layerIdx, targetState, geom, k
 function renderMatrixFallbackLayout(state, targetEl, layerIdx = 0, targetState = null, keycodeToChar) {
   const baseState = targetState && targetState.layout && targetState.layout[layerIdx] ? targetState : state;
   if (!baseState || !baseState.layout || !baseState.layout[layerIdx]) {
-    targetEl.innerHTML = '<div class="empty-state">No layout data for this layer.</div>';
+    renderEmptyState(targetEl, 'No layout data for this layer.');
     return;
   }
-  targetEl.innerHTML = '';
+  clearNode(targetEl);
 
   const layer = baseState.layout[layerIdx];
 
@@ -578,7 +603,7 @@ function renderMatrixFallbackLayout(state, targetEl, layerIdx = 0, targetState =
           keyEl.classList.add('changed');
           const curL = currentKey && currentKey !== 'KC_NO' ? keycodeToChar(String(currentKey)) : '—';
           const tgtL = targetKey && targetKey !== 'KC_NO' ? keycodeToChar(String(targetKey)) : '—';
-          keyEl.innerHTML = `<span class="old-label">${curL}</span><span class="arrow">→</span><span class="new-label">${tgtL}</span>`;
+          setHtmlDiffText(keyEl, curL, tgtL);
           keyEl.title = `Original: ${currentKey ?? '—'}\nNew: ${targetKey ?? '—'}`;
           keyEl.classList.remove('empty');
         }
@@ -590,7 +615,7 @@ function renderMatrixFallbackLayout(state, targetEl, layerIdx = 0, targetState =
           keyEl.classList.add('changed');
           const curL = currentKey && !isTransparentKeycode(currentKey) ? keycodeToChar(String(currentKey)) : '▼';
           const tgtL = targetKey && !isTransparentKeycode(targetKey) ? keycodeToChar(String(targetKey)) : '▼';
-          keyEl.innerHTML = `<span class="old-label">${curL}</span><span class="arrow">→</span><span class="new-label">${tgtL}</span>`;
+          setHtmlDiffText(keyEl, curL, tgtL);
         }
       } else {
         const label = keycodeToChar(displayKey);
@@ -602,7 +627,7 @@ function renderMatrixFallbackLayout(state, targetEl, layerIdx = 0, targetState =
           const currentLabel = currentKey ? keycodeToChar(currentKey) : 'Empty';
           const targetLabel = keycodeToChar(targetKey);
           keyEl.title = `Original: ${currentKey || 'Empty'}\nNew: ${targetKey}`;
-          keyEl.innerHTML = `<span class="old-label">${currentLabel}</span><span class="arrow">→</span><span class="new-label">${targetLabel}</span>`;
+          setHtmlDiffText(keyEl, currentLabel, targetLabel);
         }
 
         const upperLabel = label.toUpperCase();

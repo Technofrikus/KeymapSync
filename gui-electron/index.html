@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; form-action 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'" />
     <title></title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -301,6 +302,15 @@
                 Apply TapDance
               </label>
               <p class="option-desc">Syncs your tap-dance definitions. Note: Vial has fixed TD slots.</p>
+            </div>
+
+            <div class="option-group" id="keyOverrideOptionGroup">
+              <label class="checkbox-container">
+                <input type="checkbox" id="syncKeyOverrides" checked>
+                <span class="checkmark"></span>
+                Apply Key Overrides
+              </label>
+              <p class="option-desc">Syncs key-override definitions, such as modifier replacements.</p>
             </div>
 
           <div class="sync-actions">

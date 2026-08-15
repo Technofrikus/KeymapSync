@@ -11,7 +11,7 @@ KeymapSync is a configuration management tool for Vial-compatible keyboards. It 
 
 ## Data Flow
 1. **Input**: `.vil` files (offline) or connected keyboards via `vitaly` (online).
-2. **Processing**: `renderer.js` UI -> IPC -> `generate_vial_keymaps.js` -> modifies JSON state.
+2. **Processing**: `renderer.js` UI -> IPC -> shared `gui-electron/generate_vial_keymaps.js` -> modified Keymap State. Online device I/O passes through `device-transport.js`.
 3. **Output**: `_edited.vil` files or `vitaly load` to keyboard firmware.
 
 ## Rendering/Runtime Model
@@ -25,7 +25,7 @@ KeymapSync is a configuration management tool for Vial-compatible keyboards. It 
 - `vial:*`: Fetching keyboard definitions.
 
 ## State Management
-- **Frontend**: `configObj` (current mapping config) and `currentDeviceState`/`targetDeviceState` for keyboards.
+- **Frontend**: `configObj` (current mapping config) and `currentDeviceState`/`targetDeviceState` for keyboards. `renderer.js` is currently the main UI workflow hotspot.
 - **Persistence**: `alpha_layers.json` (user config), `localStorage` (UI preferences like layout).
 
 ## Build/Deployment

@@ -19,11 +19,6 @@ const INPUT_DIR = path.join(ROOT, "original");
 const OUTPUT_DIR = path.join(ROOT, "output");
 const CONFIG_PATH = path.join(ROOT, "alpha_layers.json");
 
-// Debug mode logging configuration (required by session instructions)
-const DEBUG_ENDPOINT =
-  "http://127.0.0.1:7242/ingest/11c4fe57-fdbc-4bf5-9977-45148f0b7e47";
-const DEBUG_SESSION = "debug-session";
-
 function loadJsonWithUid(filePath) {
   const raw = fs.readFileSync(filePath, "utf8");
   const uidMatch = raw.match(/"uid"\s*:\s*([0-9]+)/);
@@ -551,24 +546,6 @@ function mergeArrayOverride(targetArr, overrideArr) {
   return result;
 }
 
-async function logDebug(hypothesisId, location, message, data, runId) {
-  // #region agent log
-  fetch(DEBUG_ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      sessionId: DEBUG_SESSION,
-      runId: runId || "gen-run",
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-}
-
 function applyAlphaMappings(doc, config, runId) {
   const { alphaMappings, layers, target } = config;
   if (!alphaMappings) return [];
@@ -620,20 +597,6 @@ function applyAlphaMappings(doc, config, runId) {
       }
       replaced++;
     }
-  }
-
-  if (runId) {
-    logDebug(
-      "H1-detection",
-      "generate_vial_keymaps.js:132",
-      "Alpha replacements summary",
-      {
-        replaced,
-        fallbackSymbol,
-        fallbackNumber,
-      },
-      runId,
-    );
   }
 
   if (missingSymbols.size > 0) {
@@ -736,16 +699,6 @@ function applyOverrides(doc, config, runId) {
     const merged = mergeArrayOverride(doc.combo || [], transformed);
     doc.combo = merged;
 
-    logDebug(
-      "H3-combos",
-      "generate_vial_keymaps.js:148",
-      "Applied combo overrides",
-      {
-        before,
-        after: doc.combo.length,
-      },
-      runId,
-    );
   }
 
   if (tapDanceOverrides && tapDanceOverrides.length) {
@@ -765,16 +718,6 @@ function applyOverrides(doc, config, runId) {
     const merged = mergeArrayOverride(doc.tap_dance || [], transformed);
     doc.tap_dance = merged;
 
-    logDebug(
-      "H3-tapdance",
-      "generate_vial_keymaps.js:156",
-      "Applied tap-dance overrides",
-      {
-        before,
-        after: doc.tap_dance.length,
-      },
-      runId,
-    );
   }
 
   if (keyOverrideOverrides && keyOverrideOverrides.length) {
@@ -792,16 +735,6 @@ function applyOverrides(doc, config, runId) {
     const merged = mergeArrayOverride(doc.key_override || [], transformed);
     doc.key_override = merged;
 
-    logDebug(
-      "H3-keyoverride",
-      "generate_vial_keymaps.js:164",
-      "Applied key-override overrides",
-      {
-        before,
-        after: doc.key_override.length,
-      },
-      runId,
-    );
   }
 }
 
@@ -824,35 +757,9 @@ async function transformVilDirectory({ inputDir = INPUT_DIR, outputDir = OUTPUT_
 }
 
 async function main() {
-  const runId = `gen-run-${Date.now()}`;
   if (!fs.existsSync(CONFIG_PATH)) throw new Error(`Config not found at ${CONFIG_PATH}`);
   const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
-  const files = fs.readdirSync(INPUT_DIR).filter((f) => f.endsWith(".vil"));
-  await logDebug(
-    "H0-config",
-    "generate_vial_keymaps.js:179",
-    "Loaded configuration",
-    {
-      files: files.length,
-      target: config.target,
-      mappingCount: Object.keys(config.alphaMappings || {}).length,
-    },
-    runId,
-  );
-
-  const { results } = await transformVilDirectory({ config, runId });
-  for (const { inputPath, outputPath } of results) {
-    await logDebug(
-      "H2-file",
-      "generate_vial_keymaps.js:193",
-      "Processed file",
-      {
-        file: path.basename(inputPath),
-        outputPath,
-      },
-      runId,
-    );
-  }
+  await transformVilDirectory({ config });
 }
 
 if (require.main === module) {

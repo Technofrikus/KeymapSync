@@ -8,7 +8,8 @@
 
 ## Recently Changed / Hot Modules
 - `gui-electron/renderer.js`: Recent UI additions (tabs, visualization).
-- `generate_vial_keymaps.js`: Translation tables (de, fr, es, en) and mapping logic.
+- `gui-electron/generate_vial_keymaps.js`: Shared translation tables (de, fr, es, en), transformation logic, and `.vil` UID-safe persistence.
+- `gui-electron/device-transport.js`: Vitaly device protocol, including discovery, snapshots, applying state, locking, and layout lookup.
 
 ## Large TODOs / Future Work
 - [ ] Improved translation for more languages.
@@ -16,8 +17,8 @@
 - [ ] Multi-platform build automation refinement.
 
 ## Known Issues
-- `vitaly` exit code 0 behavior on some errors. (Checked by regex in `main.js`).
-- Large `uid` precision loss if using standard `JSON.parse` (partially mitigated).
+- Vitaly can exit 0 for some failures; `device-transport.js` treats known fatal stderr output as an error.
+- Large `uid` precision loss remains a risk if code bypasses the shared UID-safe load/save helpers.
 
 ## Areas of High Caution
 - **UID Matching**: If `uid` in `.vil` is changed, the keyboard firmware may reject the load.

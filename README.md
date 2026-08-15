@@ -31,8 +31,8 @@ Optional `mappingsVersion` in the config is reserved for future format evolution
 | `alpha_layers.json` | Rule configuration (edit this or use the GUI). |
 | `original/` | Source `.vil` files (one per keyboard). |
 | `output/` | Generated `*_edited.vil` files. |
-| `generate_vial_keymaps.js` | Generator engine (also copied into `gui-electron/` for packaging). |
-| `generate_vial_keymaps.test.js` | Lightweight regression checks: `node generate_vial_keymaps.test.js` |
+| `generate_vial_keymaps.js` | Command-line adapter for the shared transformation module in `gui-electron/`. |
+| `generate_vial_keymaps.test.js` | Regression checks for the shared transformation module. Run all GUI tests with `cd gui-electron && npm test`. |
 | `gui-electron/` | Electron app (`npm install`, `npm start`). |
 
 ## `alpha_layers.json`
@@ -64,6 +64,7 @@ Check `output/` for updated files; import in Vial or use online sync from the GU
 ```bash
 cd gui-electron
 npm install
+npm test
 npm start
 ```
 

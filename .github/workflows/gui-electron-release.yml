@@ -28,6 +28,10 @@ jobs:
         working-directory: gui-electron
         run: npm ci
 
+      - name: Run tests
+        working-directory: gui-electron
+        run: npm test
+
       - name: Build signed/notarized macOS artifacts
         working-directory: gui-electron
         env:
@@ -93,6 +97,10 @@ jobs:
       - name: Install deps
         working-directory: gui-electron
         run: npm ci
+
+      - name: Run tests
+        working-directory: gui-electron
+        run: npm test
 
       - name: Build unsigned Windows artifacts
         working-directory: gui-electron

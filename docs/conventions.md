@@ -5,12 +5,12 @@
 - **Naming**: camelCase for variables/functions; PascalCase for classes (rarely used).
 
 ## Architecture Patterns
-- **IPC-first**: Complex logic (filesystem, child process) is moved to Main process via `ipcMain.handle`.
+- **IPC-first**: The main process composes filesystem and child-process capabilities behind `ipcMain.handle`; dedicated modules own transformation and Vitaly protocol details.
 - **Data-Driven**: Keyboard behavior is defined by JSON (`alpha_layers.json`, `.vil`).
 
 ## Error Handling
-- **Main Process**: Uses `try-catch` blocks; errors are often re-thrown or sent to Renderer via IPC.
-- **Child Processes**: `vitaly` output (stderr) is checked for fatal keywords even if exit code is 0.
+- **Main Process**: Uses `try-catch` blocks; errors are re-thrown through IPC where appropriate.
+- **Device transport**: `device-transport.js` checks Vitaly output for fatal stderr keywords even if the command exits 0.
 
 ## State Management
 - **Renderer**: Single object `configObj` holds the edited state.
@@ -25,8 +25,8 @@
 
 ## Avoid / Anti-Patterns
 - **Avoid standard `JSON.parse` on `.vil`**: Large `uid` numbers will lose precision. Use the regex-based `loadJsonWithUid` helper.
-- **Don't hardcode vitaly path**: Use `resolveBundledVitalyPath` or `defaultPaths.vitaly`.
+- **Don't hardcode vitaly paths or command details**: use the device transport composed by `main.js`.
 
 ## Test Strategy
-- Basic Jest testing in `generate_vial_keymaps.test.js` (if exists).
-- Manual verification of layout diffs in the "Online Sync" preview.
+- Node/assert regression scripts cover transformation, device transport, and basic keyboard presentation behavior. Run `cd gui-electron && npm test`.
+- Manually verify layout diffs in the "Online Sync" preview.

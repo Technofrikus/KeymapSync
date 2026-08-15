@@ -6,12 +6,23 @@ contextBridge.exposeInMainWorld('api', {
   savePath: (opts) => ipcRenderer.invoke('dialog:save', opts),
   loadAlpha: (filePath) => ipcRenderer.invoke('alpha:load', filePath),
   saveAlpha: (filePath, content) => ipcRenderer.invoke('alpha:save', filePath, content),
+  saveVilBackup: (filePath, state) => ipcRenderer.invoke('vial:saveBackup', filePath, state),
   runGenerator: (opts) => ipcRenderer.invoke('generator:run', opts),
   processConfig: (doc, config) => ipcRenderer.invoke('generator:process', doc, config),
   setUnsavedChanges: (hasChanges) => ipcRenderer.invoke('app:setUnsavedChanges', hasChanges),
   checkUnsavedChanges: () => ipcRenderer.invoke('app:checkUnsavedChanges'),
   onSaveBeforeQuit: (callback) => {
-    ipcRenderer.on('app:save-before-quit', () => callback());
+    ipcRenderer.on('app:save-before-quit', async (_event, requestId) => {
+      try {
+        const result = await callback();
+        ipcRenderer.send('app:save-before-quit-result', requestId, result);
+      } catch (err) {
+        ipcRenderer.send('app:save-before-quit-result', requestId, {
+          ok: false,
+          error: err.message || String(err),
+        });
+      }
+    });
   },
   onLog: (callback) => {
     ipcRenderer.on('log:data', (_event, data) => callback(data));
