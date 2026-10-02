@@ -30,5 +30,7 @@
 
 ## Test Strategy
 - Node/assert regression scripts cover validation, file authority, transformation, device transport, and keyboard presentation behavior. Run `npm test` at the repo root and in `shells/electron/`.
+- Keyboard protocol code is tested against a simulated Vial keyboard and against recorded vitaly output; `npm run test:e2e` runs the web build in Chromium.
+- Run `docs/manual-web-smoke-test.md` with a physical keyboard before releasing web shell changes.
 - Run `docs/manual-electron-smoke-test.md` with a physical keyboard before releases that change IPC, backup, apply, or close/save behavior.
 - Manually verify layout diffs in the "Online Sync" preview.

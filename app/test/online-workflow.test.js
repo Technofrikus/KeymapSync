@@ -74,5 +74,36 @@ import createOnlineWorkflow from '../src/ui/online-workflow.js';
   });
   assert.strictEqual(staleResult.stale, true);
 
+  // A locked keyboard (web shell) is unlocked by holding keys, then the write is retried.
+  const lockedCalls = [];
+  const messages = [];
+  let lockedOnce = true;
+  const lockedWorkflow = createOnlineWorkflow({
+    api: {
+      device: {
+        snapshot: async () => ({ layout: [[['KC_ESC', 'KC_A']]] }),
+        apply: async () => {
+          lockedCalls.push('apply');
+          if (lockedOnce) { lockedOnce = false; throw Object.assign(new Error('locked'), { code: 'LOCKED' }); }
+        },
+        lockStatus: async () => ({ locked: true, unlockKeys: [[0, 0], [0, 1]] }),
+        lock: async (_id, locked, { onProgress }) => { lockedCalls.push(`lock:${locked}`); onProgress({ remaining: 3 }); },
+      },
+    },
+    transform: () => ({ state: { layout: [[['KC_ESC', 'KC_A']]] } }), // previews show canonical names
+    confirm: (message) => { messages.push(message); return true; },
+    status: (message) => messages.push(message),
+  });
+  const lockedResult = await lockedWorkflow.apply({
+    device: { id: 1 },
+    previewTarget: { layout: [[['KC_ESCAPE', 'KC_A']]] },
+    config: { valid: true },
+    documentLike: staleDocument,
+  });
+  assert.strictEqual(lockedResult.ok, true);
+  assert.deepStrictEqual(lockedCalls, ['apply', 'lock:false', 'apply']);
+  assert.ok(messages.some((message) => message.includes('hold KC_ESC + KC_A')));
+  assert.ok(messages.includes('Hold KC_ESC + KC_A… 3'));
+
   console.log('Online workflow tests passed.');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

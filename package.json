@@ -8,12 +8,19 @@
   "scripts": {
     "dev": "vite",
     "build:electron": "vite build --mode electron",
-    "test": "node --test \"app/test/*.test.js\""
+    "build:web": "vite build --mode web",
+    "preview:web": "vite preview --mode web",
+    "test": "node --test \"app/test/*.test.js\"",
+    "test:e2e": "vite build --mode web && node app/test/e2e/web-e2e.mjs"
   },
   "devDependencies": {
+    "playwright-core": "^1.56.1",
     "vite": "^8.3.2"
   },
   "engines": {
     "node": ">=22"
+  },
+  "dependencies": {
+    "xz-decompress": "^0.2.3"
   }
 }

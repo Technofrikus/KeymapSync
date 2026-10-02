@@ -66,7 +66,54 @@ Done when: app works with Editor + Online Sync only, tests green, smoke test pas
 Done when: Electron app works exactly as after Phase 0, but all shared code has no
 Node/Electron dependencies.
 
-## Phase 2 — Web shell (WebHID)
+## Phase 2 — Web shell (WebHID) — done (pending a check on a real keyboard)
+
+What was built:
+
+- `app/src/platform/webhid-transport.js`: WebHID device picking (usage page
+  `0xFF60`, usage `0x61`), 32-byte send/receive, one request at a time, timeout
+  and resend, late answers to VIA commands ignored.
+- `app/src/core/vial-protocol.js`: the Vial commands for `snapshot` and `apply`
+  (keymap, encoders, layout options, combos, tap dance, key overrides, alt
+  repeat keys; macros and QMK settings are read for backups but never written),
+  plus unlock/lock. Writing only sends what differs from the keyboard.
+- `app/src/core/vial-keycodes.js` (+ generated `vial-keycode-tables.js`):
+  keycode names for Vial protocol 5 and 6, identical to vitaly (all 131,072
+  codes compared).
+- `app/src/platform/web.js`: the web adapter (keyboards, config in browser
+  storage or a picked file, `.vil` download, `beforeunload` warning).
+  `platform/index.js` picks it whenever Electron's `window.api` is missing.
+- Online Sync gets a "Connect keyboard…" button (web only), a browser-support
+  message (Safari/Firefox, non-HTTPS) and an unlock flow when writing the
+  bootloader key. Previews now compare keycodes in the keyboard's own spelling
+  (`keymap-normalize.js`), so no-op renames no longer show up as changes.
+- `.github/workflows/web.yml`: tests plus GitHub Pages deployment from `master`.
+
+How it was verified (no physical keyboard was available):
+
+- A simulated Vial keyboard (`app/test/support/simulated-vial-keyboard.js`)
+  answers the raw HID commands like Vial firmware.
+- vitaly itself was run against that simulator (vitaly built with a stand-in
+  `hidapi` crate). Its `save` output is the fixture
+  `app/test/fixtures/vitaly-save-simulated.vil`; the web `snapshot` is
+  identical. Its `load` result is `vitaly-load-simulated.json`; the web `apply`
+  ends in the same keyboard state (vitaly additionally clears an unused bit in
+  untouched key overrides).
+- `npm run test:e2e` drives the built web app in Chromium against the
+  simulator: connect, read, preview, write, preview again (no changes), backup.
+
+Known differences to vitaly:
+
+- Macro lists keep empty slots between macros (vitaly stops at the first empty
+  one), so backups never drop a macro.
+- 4-byte QMK settings are read correctly (vitaly repeats byte 3).
+- Keyboards whose definition is LZMA-compressed (very old Vial) and VIA-only
+  keyboards are refused with a message.
+
+Still to do: run `docs/manual-web-smoke-test.md` on real keyboards (step 4
+below), then enable GitHub Pages.
+
+### Original plan
 
 Reference implementations (all open source, check licenses before copying code):
 

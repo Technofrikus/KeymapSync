@@ -1036,6 +1036,11 @@ button:disabled {
   border-bottom: 2px solid #1f2937;
 }
 
+.section-header .section-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .section-header h3 {
   margin: 0;
   font-size: 14px;

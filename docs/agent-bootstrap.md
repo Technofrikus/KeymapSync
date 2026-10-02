@@ -3,18 +3,22 @@
 ## Tech Stack
 - **Shared app**: plain JavaScript ES modules + DOM, bundled by **Vite** (`app/`).
 - **Electron** desktop shell (`shells/electron/`), using the **Rust** `vitaly` CLI for keyboard I/O.
+- **Web** shell (`app/src/platform/web.js`): WebHID + the JS Vial protocol in `app/src/core/vial-protocol.js`.
 - **QMK/Vial** keyboard firmware protocols.
 
 ## Architecture
 - The shared app talks only to the platform interface (`app/src/platform/index.js`). Each shell implements it.
 - **Transformation**: `app/src/core/keymap-transform.js` is a pure Keymap State transform (no I/O), run in the app.
 - **Electron**: `shells/electron/main.js` exposes IPC handlers; `device-transport.js` owns the vitaly command protocol.
+- **Web**: `platform/index.js` loads `web.js` when `window.api` is missing. Keymap State JSON from the web shell must stay identical to `vitaly save` (fixture tests).
 
 ## Critical Rules (Do/Don't)
 - **DO NOT** use `JSON.parse` on `.vil` text if it contains a `uid`. Use `parseKeymapState` / `serializeKeymapState` in `app/src/core/keymap-state.js`.
 - **DO NOT** import Node or Electron APIs from `app/`. Platform access goes through the platform interface.
 - **DO** edit shared core modules in `app/src/core/` only; `shells/electron/core/` is a generated copy.
 - **DO** verify keycodes using `keycode-mapping.js`.
+- **DO NOT** edit `app/src/core/vial-keycode-tables.js` by hand; regenerate it with `scripts/generate-vial-keycodes.mjs <vitaly checkout>`.
+- **DO** test keyboard protocol changes against the simulated keyboard (`app/test/support/simulated-vial-keyboard.js`).
 
 ## Quick Start Nav
 - `app/src/main.js`: App composition and navigation.
@@ -34,4 +38,5 @@
 
 ## Verification
 - Repo root: `npm install && npm test` (shared app tests).
+- Repo root: `npm run test:e2e` (web build in Chromium against the simulated keyboard).
 - `shells/electron`: `npm install && npm test` (shell tests).

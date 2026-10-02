@@ -16,9 +16,10 @@ Optional `mappingsVersion` in the config is reserved for future format evolution
 
 | Capability | Description |
 |------------|-------------|
+| **Web app** | The same app in Chrome or Edge, no install: talks to the keyboard directly over WebHID. Configuration is kept in the browser or in a file you pick. |
 | **Electron GUI** | Visual editor for alpha table, combos, and tap dances; schema-validated configuration; configurable paths; logs; unsaved-change guard. |
 | **Layout sorting** | Editor can order keys as QWERTY, Dvorak, Colemak, or alphabetical—cosmetic only; rules are still keyed by letter. |
-| **Online sync** | Talk to a connected Vial keyboard over USB via [vitaly](https://github.com/bskaplou/vitaly): list devices, dump live JSON, merge preview, write back, optional EEPROM lock. stderr is interpreted so failures surface even when vitaly exits 0. |
+| **Online sync** | Talk to a connected Vial keyboard over USB: list devices, dump live JSON, merge preview, write back. The desktop app uses [vitaly](https://github.com/bskaplou/vitaly); the web app speaks the Vial protocol itself and produces the same JSON. |
 | **Keyboard geometry** | Fetch compressed KLE-style definitions from the device (Vial HID) to preview layouts and place keys visually in the online flow. |
 
 ## Repository layout
@@ -28,9 +29,11 @@ Optional `mappingsVersion` in the config is reserved for future format evolution
 | `alpha_layers.json` | Rule configuration (edit this or use the GUI). |
 | `app/` | Shared app (screens, rules, validation), built with Vite and used by every shell. |
 | `app/src/core/alpha-layers.schema.json` | Machine-readable configuration schema used alongside semantic validation. |
+| `app/src/platform/web.js` | Web shell (WebHID); built with `npm run build:web` into `dist/web/`. |
 | `shells/electron/` | Electron desktop shell (`npm install`, `npm start`). |
 | `docs/platform-plan.md` | Roadmap: shared app with web (WebHID) and Tauri desktop shells. |
 | `docs/manual-electron-smoke-test.md` | Release checklist for backup, physical key overrides, selective apply, and close/save behavior. |
+| `docs/manual-web-smoke-test.md` | Checklist for the web app on a physical keyboard, including a comparison with vitaly. |
 
 ## `alpha_layers.json`
 
@@ -53,6 +56,9 @@ Requires Node 22+.
 ```bash
 npm install                 # repo root: shared app + Vite
 npm test                    # shared app tests
+npm run dev                 # web app with hot reload (open in Chrome/Edge)
+npm run build:web           # static web app in dist/web/ (serve over HTTPS)
+npm run test:e2e            # web app in Chromium against a simulated keyboard
 
 cd shells/electron
 npm install
@@ -63,7 +69,11 @@ npm start                   # builds the shared app, then starts Electron
 **Views**
 
 1. **Keymap** — Edit the rule tables, pick physical layout ordering, save `alpha_layers.json`.
-2. **Online sync** — Select a device, preview merged layout, apply to the keyboard, optionally lock.
+2. **Online sync** — Select a device, preview merged layout, apply to the keyboard. In the web app, **Connect keyboard…** asks the browser for access first.
+
+### Web app
+
+Runs in Chrome and Edge (WebHID); Firefox and Safari can edit the configuration but not connect keyboards. Keyboard access needs HTTPS (or `localhost`). The GitHub workflow `.github/workflows/web.yml` tests every push and publishes `master` to GitHub Pages once Pages is enabled (Settings → Pages → Source: GitHub Actions). The web app reads everything a backup needs, but only writes keys, encoders, layout options, combos, tap dance, key overrides and alt repeat keys; Vial keyboards only (not VIA-only firmware).
 
 Filesystem choices are represented in the renderer by opaque, window-scoped grants. Actual paths and file operations remain in Electron's main process.
 
@@ -151,3 +161,13 @@ Cross-compiling Electron apps with native Node modules from macOS to Windows is 
 ## License
 
 KeymapSync is licensed under the GNU General Public License v3.0 or later. See `LICENSE`.
+
+### Credits
+
+The web app's keyboard code builds on these open-source projects:
+
+- [vial-gui](https://github.com/vial-kb/vial-gui) (GPL-2.0-or-later) — reference for the Vial protocol (keymap, dynamic entries, unlock).
+- [VIA app](https://github.com/the-via/app) (GPL-3.0) — reference for WebHID device picking.
+- [vitaly](https://github.com/bskaplou/vitaly) (MIT, © 2025 Boris Kaplunovsky) — keycode name tables (`app/src/core/vial-keycode-tables.js`) and the Keymap State format.
+- pipette — reference for reading the keyboard definition.
+- [xz-decompress](https://github.com/httptoolkit/xz-decompress) (MIT) — decompressing the keyboard definition in the browser.

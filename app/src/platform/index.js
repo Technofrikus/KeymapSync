@@ -16,6 +16,8 @@
  *   device.apply(deviceId, state)
  *   device.lock(deviceId, locked)
  *   device.layout(deviceId)            -> string | null (diagnostic only)
+ *   device.requestAccess()             optional: ask the user to pick a keyboard (web)
+ *   device.unsupportedReason           optional: why keyboards cannot be used here (web)
  *   fetchKeyboardDefinition({ vendorId, productId, serialNumber })
  *                                      -> { ok, definition, layoutOptionsPacked } | { ok: false, error }
  *
@@ -24,11 +26,17 @@
  */
 import createElectronPlatform from './electron.js';
 
-function detectPlatform() {
+// Electron's preload exposes `window.api`; anywhere else this is the web
+// shell. The web adapter is loaded on demand so the Electron build stays lean.
+async function detectPlatform() {
   if (globalThis.api) return createElectronPlatform(globalThis.api);
-  throw new Error('KeymapSync is running without a supported platform shell.');
+  const [{ default: createWebPlatform }, { default: defaultConfig }] = await Promise.all([
+    import('./web.js'),
+    import('../../../alpha_layers.json'),
+  ]);
+  return createWebPlatform({ defaultConfig });
 }
 
-const platform = detectPlatform();
+const platform = await detectPlatform();
 
 export default platform;

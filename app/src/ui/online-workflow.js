@@ -2,6 +2,7 @@
  * selected sections are compared with the preview, preventing stale writes. */
 import * as defaultPresentation from './keymap-presentation.js';
 import { transformKeymapState } from '../core/keymap-transform.js';
+import { normalizeForKeyboard } from '../core/keymap-normalize.js';
 
 export default function createOnlineWorkflow(options = {}) {
   const api = options.api;
@@ -67,7 +68,7 @@ export default function createOnlineWorkflow(options = {}) {
       'refreshDevicesBtn', 'deviceList', 'onlineSyncPanel', 'selectedDeviceName',
       'deviceCapabilities', 'previewOnlineSyncBtn', 'runOnlineSyncBtn', 'previewDiff',
       'syncPreview', 'onlineStatus', 'layoutVisualization', 'layoutGrid',
-      'previewLayouts', 'downloadBackupBtn',
+      'previewLayouts', 'downloadBackupBtn', 'connectDeviceBtn',
     ];
     const refs = Object.fromEntries(ids.map((id) => [id, doc.getElementById(id)]));
     const state = { selectedDevice: null, currentDeviceState: null, targetDeviceState: null, geometry: null };
@@ -118,7 +119,18 @@ export default function createOnlineWorkflow(options = {}) {
       refs.previewDiff?.appendChild(details);
     };
 
+    const canRequestAccess = typeof api?.device?.requestAccess === 'function' && !api.device.unsupportedReason;
+    refs.connectDeviceBtn?.classList.toggle('hidden', !canRequestAccess);
+
+    async function connectDevice() {
+      try {
+        const granted = await api.device.requestAccess();
+        if (granted) await refreshDevices();
+      } catch (error) { empty(`Could not connect: ${error.message}`); }
+    }
+
     async function refreshDevices() {
+      if (api?.device?.unsupportedReason) { empty(api.device.unsupportedReason); return; }
       empty('Searching for keyboards...');
       refs.onlineSyncPanel?.classList.add('hidden');
       refs.layoutVisualization?.classList.add('hidden');
@@ -126,7 +138,12 @@ export default function createOnlineWorkflow(options = {}) {
       state.geometry = null;
       try {
         const devices = await api.device.discover();
-        if (!devices?.length) { empty('No Vial keyboards found.'); return; }
+        if (!devices?.length) {
+          empty(canRequestAccess
+            ? 'No keyboard connected yet. Click "Connect keyboard…" and choose your Vial keyboard.'
+            : 'No Vial keyboards found.');
+          return;
+        }
         clear(refs.deviceList);
         devices.sort((a, b) => (a.product_name || '').localeCompare(b.product_name || ''));
         devices.forEach((device) => {
@@ -173,6 +190,7 @@ export default function createOnlineWorkflow(options = {}) {
           if (raw && String(raw).trim()) layoutInfo = String(raw).trim();
         } catch { /* optional diagnostic */ }
         const definition = await api.fetchKeyboardDefinition({
+          deviceId: device.id,
           vendorId: device.vendor_id,
           productId: device.product_id,
           serialNumber: device.serial_number || '',
@@ -210,7 +228,7 @@ export default function createOnlineWorkflow(options = {}) {
         state.currentDeviceState = await api.device.snapshot(state.selectedDevice.id);
         const config = mountOptions.session?.config;
         const transformation = transform(state.currentDeviceState, config);
-        state.targetDeviceState = transformation.state;
+        state.targetDeviceState = normalizeForKeyboard(state.currentDeviceState, transformation.state);
         (transformation.warnings || []).forEach((warning) => mountOptions.log?.(`Warning: untranslated symbol ${warning}\n`));
         const diff = calculateDiff(state.currentDeviceState, state.targetDeviceState, {
           getMatrixCell: presentation.getMatrixCell,
@@ -252,6 +270,7 @@ export default function createOnlineWorkflow(options = {}) {
       if (result.ok) refs.onlineStatus.textContent = 'Backup saved.';
     }
     refs.refreshDevicesBtn?.addEventListener('click', refreshDevices);
+    refs.connectDeviceBtn?.addEventListener('click', connectDevice);
     refs.previewOnlineSyncBtn?.addEventListener('click', preview);
     refs.runOnlineSyncBtn?.addEventListener('click', applyCurrent);
     refs.downloadBackupBtn?.addEventListener('click', backupCurrent);
@@ -267,22 +286,45 @@ export default function createOnlineWorkflow(options = {}) {
     if (!confirmApply('Do you want to write these changes to the keyboard now?')) return { ok: false, cancelled: true };
     try {
       const current = await api.device.snapshot(device.id);
-      const transformed = transform(current, config);
+      const target = normalizeForKeyboard(current, transform(current, config).state);
       const sections = selectedSections(documentLike);
       const stale = sections.some(([section, enabled]) => (
-        enabled && stringify(previewTarget[section]) !== stringify(transformed.state[section])
+        enabled && stringify(previewTarget[section]) !== stringify(target[section])
       ));
       if (stale) {
         status('The keyboard changed since the preview. Please preview again before applying.');
         return { ok: false, stale: true };
       }
-      await api.device.apply(device.id, mergeSelected(current, transformed.state, sections));
+      const merged = mergeSelected(current, target, sections);
+      try {
+        await api.device.apply(device.id, merged);
+      } catch (error) {
+        if (error?.code !== 'LOCKED' || !(await unlock(device, current))) throw error;
+        await api.device.apply(device.id, merged);
+      }
       status('Sync completed successfully!');
       return { ok: true };
     } catch (error) {
       status(`Error writing: ${error.message || error}`);
       return { ok: false, error: error.message || String(error) };
     }
+  }
+
+  // Vial only accepts the bootloader key while unlocked; the user unlocks by
+  // holding the keys the keyboard names (web shell only).
+  async function unlock(device, current) {
+    if (!api.device.lockStatus) return false;
+    const { unlockKeys = [] } = await api.device.lockStatus(device.id);
+    const keyNames = unlockKeys
+      .map(([row, col]) => current?.layout?.[0]?.[row]?.[col] ?? `row ${row}, column ${col}`)
+      .join(' + ');
+    if (!confirmApply(`The keyboard is locked. To unlock it, hold ${keyNames || 'its unlock keys'} until it unlocks. Start now?`)) return false;
+    status(`Hold ${keyNames || 'the unlock keys'} now…`);
+    await api.device.lock(device.id, false, {
+      onProgress: ({ remaining }) => status(`Hold ${keyNames || 'the unlock keys'}… ${remaining}`),
+    });
+    status('Keyboard unlocked. Writing changes…');
+    return true;
   }
 
   async function backup({ device, state, suggestedName } = {}) {
