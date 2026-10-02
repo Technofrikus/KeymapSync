@@ -31,6 +31,7 @@ Optional `mappingsVersion` in the config is reserved for future format evolution
 | `app/src/core/alpha-layers.schema.json` | Machine-readable configuration schema used alongside semantic validation. |
 | `app/src/platform/web.js` | Web shell (WebHID); built with `npm run build:web` into `dist/web/`. |
 | `shells/electron/` | Electron desktop shell (`npm install`, `npm start`). |
+| `shells/tauri/` | Small Tauri desktop shell (`npm install`, `npm run tauri dev` / `npm run tauri build`; needs Rust). |
 | `docs/platform-plan.md` | Roadmap: shared app with web (WebHID) and Tauri desktop shells. |
 | `docs/manual-electron-smoke-test.md` | Release checklist for backup, physical key overrides, selective apply, and close/save behavior. |
 | `docs/manual-web-smoke-test.md` | Checklist for the web app on a physical keyboard, including a comparison with vitaly. |

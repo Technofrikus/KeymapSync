@@ -4,7 +4,7 @@
 - `app/` — Shared app (browser code, built with Vite). Runs unchanged in every shell.
     - `index.html`, `styles.css`: UI markup and styles.
     - `src/main.js`: Composition root and view navigation.
-    - `src/platform/`: Platform interface (`index.js`) and one adapter per shell: `electron.js`, `web.js` (with `webhid-transport.js` and `decompress.js`); Tauri follows.
+    - `src/platform/`: Platform interface (`index.js`) and one adapter per shell: `electron.js`, `web.js` (with `webhid-transport.js` and `decompress.js`), `tauri.js`.
     - `src/ui/`: `editor-workflow.js`, `online-workflow.js`, `config-session.js`, `keymap-presentation.js`.
     - `src/core/`: Pure logic with no DOM, file or device access:
         - `keymap-transform.js`: Keymap State transformation (Alpha Mappings, overrides, translation tables).
@@ -19,7 +19,8 @@
         - `support/`: Simulated Vial keyboard and fake WebHID (`simulated-vial-keyboard.js`), test keyboard contents.
         - `fixtures/`: vitaly output recorded against the simulated keyboard, keycode name samples.
         - `e2e/web-e2e.mjs`: Chromium end-to-end test of the web build (`npm run test:e2e`).
-- `shells/electron/` — Electron desktop shell.
+- `shells/electron/` — Electron desktop shell (to be removed).
+- `shells/tauri/` — Tauri desktop shell (Rust: HID pass-through and file dialogs).
     - `main.js`: Main process; window lifecycle and IPC.
     - `preload.cjs`: Exposes the platform interface on `window.api`.
     - `device-transport.js`: Vitaly-backed device discovery, snapshot, apply, lock, layout.

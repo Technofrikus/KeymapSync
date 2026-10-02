@@ -2,10 +2,12 @@ import { defineConfig } from 'vite';
 
 // One shared app (`app/`), built once per shell. `--mode electron` writes the
 // renderer into the Electron shell; `--mode web` writes the static web site
-// (WebHID) into `dist/web`. A Tauri build will follow.
+// (WebHID) into `dist/web`, and `--mode tauri` writes the Tauri
+// desktop build into `dist/tauri`.
 const outDirs = {
   electron: '../shells/electron/renderer',
   web: '../dist/web',
+  tauri: '../dist/tauri',
 };
 
 export default defineConfig(({ mode }) => ({
