@@ -2,7 +2,8 @@
  * Platform interface.
  *
  * The shared app never touches the file system or the keyboard directly; it
- * calls the platform object exported here. Each shell provides one adapter:
+ * calls the platform object exported here. Each shell provides one adapter
+ * (electron.js, tauri.js, web.js):
  *
  *   getDefaults()                      -> { config: grant }
  *   chooseConfig()                     -> { grant, config } | null (cancelled)
@@ -26,10 +27,18 @@
  */
 import createElectronPlatform from './electron.js';
 
-// Electron's preload exposes `window.api`; anywhere else this is the web
-// shell. The web adapter is loaded on demand so the Electron build stays lean.
+// Electron's preload exposes `window.api`, Tauri exposes `window.__TAURI__`;
+// anywhere else this is the web shell. Adapters other than Electron's are
+// loaded on demand so each build stays lean.
 async function detectPlatform() {
   if (globalThis.api) return createElectronPlatform(globalThis.api);
+  if (globalThis.__TAURI__) {
+    const [{ default: createTauriPlatform }, { default: defaultConfig }] = await Promise.all([
+      import('./tauri.js'),
+      import('../../../alpha_layers.json'),
+    ]);
+    return createTauriPlatform({ tauri: globalThis.__TAURI__, defaultConfig });
+  }
   const [{ default: createWebPlatform }, { default: defaultConfig }] = await Promise.all([
     import('./web.js'),
     import('../../../alpha_layers.json'),

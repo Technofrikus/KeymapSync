@@ -152,7 +152,30 @@ Risks:
 Done when: a user can open the site in Chrome/Edge, connect a keyboard, edit
 mappings, preview and write — same result as the desktop app.
 
-## Phase 3 — Desktop shell on Tauri
+## Phase 3 — Desktop shell on Tauri — built (pending smoke test, Electron still in place)
+
+What was built (`shells/tauri/`):
+
+- Tauri app that loads the shared app (`npm run build:tauri`).
+- The "later simplification" below was taken straight away: the Rust side is a
+  tiny HID pass-through (`hid_list`, `hid_exchange` for raw 32-byte messages) and
+  the shared JS Vial protocol from Phase 2 runs on top. So vitaly is **not**
+  bundled, there is no sidecar per OS, and `fetchDefinition` needs no extra Rust.
+- Files are Rust commands (native dialogs, atomic writes, opaque grants);
+  validation and `.vil` serialization stay in the shared app.
+- `app/src/platform/tauri.js` is the adapter; the close guard (Save / Don't Save /
+  Cancel) lives there too. Tests: `app/test/tauri-platform.test.js`.
+- `.github/workflows/tauri-release.yml` builds macOS (universal), Windows and
+  Linux installers on version tags (draft release, signing when secrets exist).
+
+Known differences to Electron: keyboards with LZMA-compressed definitions (very
+old Vial) are refused, as in the web version.
+
+Still to do: run `docs/manual-electron-smoke-test.md` on the Tauri build on macOS
+and Windows with a real keyboard, then remove Electron (`shells/electron/`,
+`node-hid`, electron-builder, its release workflow) and the vitaly scripts.
+
+### Original plan
 
 - Create a Tauri app that loads the shared app build.
 - Implement the platform interface in Rust commands:

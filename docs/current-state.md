@@ -17,7 +17,7 @@
 - [ ] Improved translation for more languages.
 - [ ] Better validation for Tap-Dance/Combo loops.
 - [x] Web shell with WebHID (`docs/platform-plan.md`, Phase 2) — verify on real keyboards (`docs/manual-web-smoke-test.md`).
-- [ ] Tauri desktop shell replacing Electron (Phase 3).
+- [x] Tauri desktop shell built (Phase 3); [ ] smoke test on macOS/Windows, then remove Electron.
 
 ## Known Issues
 - Web shell: macros and QMK settings are read but not written; LZMA-compressed definitions (very old Vial) and VIA-only keyboards are not supported.

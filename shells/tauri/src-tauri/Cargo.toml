@@ -1,0 +1,21 @@
+[package]
+name = "keymapsync"
+version = "0.1.0"
+description = "KeymapSync desktop shell (Tauri)"
+license = "GPL-3.0-or-later"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+hidapi = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+lto = true
+opt-level = "s"
+strip = true
