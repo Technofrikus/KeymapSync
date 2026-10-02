@@ -4,7 +4,7 @@
  * Transport-independent: callers supply `sendReceive`, which writes one
  * 32-byte message to the keyboard's raw HID interface and resolves with the
  * 32-byte response, plus the decompressors for the definition blob. The
- * Electron shell backs this with node-hid; the web shell will use WebHID.
+ * web shell backs this with WebHID, the Tauri shell with a Rust HID pass-through.
  * @license GPL-2.0-or-later
  */
 

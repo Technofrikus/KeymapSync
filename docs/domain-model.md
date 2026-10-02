@@ -15,9 +15,9 @@
 - **Symbol Translation**: Translates symbols (e.g. `(`) into OS/Language specific keycodes (e.g. `LSFT(KC_8)` for German Mac).
 
 ## Data Flows
-1. **Fetch**: Keyboard HID -> `vitaly` -> JSON State.
+1. **Fetch**: Keyboard HID -> Vial protocol -> JSON State.
 2. **Transform**: JSON State + `alphaMappings` -> Modified JSON State.
-3. **Write**: Modified JSON State -> `vitaly` -> Keyboard HID.
+3. **Write**: Modified JSON State -> Vial protocol -> Keyboard HID.
 
 ## Lifecycle of a Sync
 - `Searching` -> `Selected` -> `Previewing (Diffing)` -> `Confirming` -> `Applying`.

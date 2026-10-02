@@ -4,7 +4,7 @@
 - `app/` — Shared app (browser code, built with Vite). Runs unchanged in every shell.
     - `index.html`, `styles.css`: UI markup and styles.
     - `src/main.js`: Composition root and view navigation.
-    - `src/platform/`: Platform interface (`index.js`) and one adapter per shell: `electron.js`, `web.js` (with `webhid-transport.js` and `decompress.js`), `tauri.js`.
+    - `src/platform/`: Platform interface (`index.js`) and one adapter per shell: `web.js` (with `webhid-transport.js` and `decompress.js`), `tauri.js`.
     - `src/ui/`: `editor-workflow.js`, `online-workflow.js`, `config-session.js`, `keymap-presentation.js`.
     - `src/core/`: Pure logic with no DOM, file or device access:
         - `keymap-transform.js`: Keymap State transformation (Alpha Mappings, overrides, translation tables).
@@ -19,27 +19,19 @@
         - `support/`: Simulated Vial keyboard and fake WebHID (`simulated-vial-keyboard.js`), test keyboard contents.
         - `fixtures/`: vitaly output recorded against the simulated keyboard, keycode name samples.
         - `e2e/web-e2e.mjs`: Chromium end-to-end test of the web build (`npm run test:e2e`).
-- `shells/electron/` — Electron desktop shell (to be removed).
 - `shells/tauri/` — Tauri desktop shell (Rust: HID pass-through and file dialogs).
-    - `main.js`: Main process; window lifecycle and IPC.
-    - `preload.cjs`: Exposes the platform interface on `window.api`.
-    - `device-transport.js`: Vitaly-backed device discovery, snapshot, apply, lock, layout.
-    - `hid-definition.js`: node-hid transport for `core/vial-definition.js`.
-    - `file-authority.js`: Main-process capability registry for user-selected files.
-    - `scripts/sync-shared.cjs`: Copies needed `app/src/core` modules into `core/` and builds the app into `renderer/` (both generated, git-ignored).
-    - `scripts/prep-dist.cjs`, `scripts/fetch-vitaly.cjs`: Packaging preparation.
-    - `bin/`: OS-specific `vitaly` binaries (git-ignored).
+    - `src-tauri/src/hid.rs`, `files.rs`, `main.rs`: Raw HID pass-through, native file dialogs, window close guard.
 - `alpha_layers.json` — Default rule configuration.
-- `scripts/` — vitaly build helpers; `generate-vial-keycodes.mjs` regenerates the keycode tables from a vitaly checkout.
+- `scripts/` — `generate-vial-keycodes.mjs` regenerates the keycode tables from a vitaly checkout.
 - `dist/web/` — Built web app (`npm run build:web`, git-ignored).
-- `docs/` — Reference documentation.
+- `docs/` — Reference documentation; `docs/archive/` holds finished plans.
 - `Reference only/` — Local, unversioned reference sources (e.g. vitaly).
 
 ## Hot Paths
 - `app/src/ui/*-workflow.js`: UI changes are localized by workflow.
 - `app/src/core/keymap-transform.js`: Heart of the data transformation.
 - `app/src/platform/index.js`: The contract every shell implements.
-- `shells/electron/main.js`, `device-transport.js`: Electron IPC and vitaly protocol.
+- `app/src/core/vial-protocol.js`: Keyboard read/write.
 
 ## Naming Conventions
 - `.vil`: Vial Layout files (JSON format).

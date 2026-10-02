@@ -17,9 +17,9 @@ Optional `mappingsVersion` in the config is reserved for future format evolution
 | Capability | Description |
 |------------|-------------|
 | **Web app** | The same app in Chrome or Edge, no install: talks to the keyboard directly over WebHID. Configuration is kept in the browser or in a file you pick. |
-| **Electron GUI** | Visual editor for alpha table, combos, and tap dances; schema-validated configuration; configurable paths; logs; unsaved-change guard. |
+| **Desktop app** | Small Tauri app with the same visual editor for alpha table, combos, and tap dances; schema-validated configuration; configurable paths; logs; unsaved-change guard. |
 | **Layout sorting** | Editor can order keys as QWERTY, Dvorak, Colemak, or alphabetical—cosmetic only; rules are still keyed by letter. |
-| **Online sync** | Talk to a connected Vial keyboard over USB: list devices, dump live JSON, merge preview, write back. The desktop app uses [vitaly](https://github.com/bskaplou/vitaly); the web app speaks the Vial protocol itself and produces the same JSON. |
+| **Online sync** | Talk to a connected Vial keyboard over USB: list devices, dump live JSON, merge preview, write back. Both the web and desktop apps speak the Vial protocol themselves. |
 | **Keyboard geometry** | Fetch compressed KLE-style definitions from the device (Vial HID) to preview layouts and place keys visually in the online flow. |
 
 ## Repository layout
@@ -30,11 +30,10 @@ Optional `mappingsVersion` in the config is reserved for future format evolution
 | `app/` | Shared app (screens, rules, validation), built with Vite and used by every shell. |
 | `app/src/core/alpha-layers.schema.json` | Machine-readable configuration schema used alongside semantic validation. |
 | `app/src/platform/web.js` | Web shell (WebHID); built with `npm run build:web` into `dist/web/`. |
-| `shells/electron/` | Electron desktop shell (`npm install`, `npm start`). |
 | `shells/tauri/` | Small Tauri desktop shell (`npm install`, `npm run tauri dev` / `npm run tauri build`; needs Rust). |
-| `docs/platform-plan.md` | Roadmap: shared app with web (WebHID) and Tauri desktop shells. |
-| `docs/manual-electron-smoke-test.md` | Release checklist for backup, physical key overrides, selective apply, and close/save behavior. |
-| `docs/manual-web-smoke-test.md` | Checklist for the web app on a physical keyboard, including a comparison with vitaly. |
+| `docs/archive/platform-plan.md` | Archived (done) plan for the move to a shared web + Tauri app. |
+| `docs/manual-desktop-smoke-test.md` | Release checklist for backup, physical key overrides, selective apply, and close/save behavior. |
+| `docs/manual-web-smoke-test.md` | Checklist for the web app on a physical keyboard, including a comparison with vitaly output. |
 
 ## `alpha_layers.json`
 
@@ -60,11 +59,8 @@ npm test                    # shared app tests
 npm run dev                 # web app with hot reload (open in Chrome/Edge)
 npm run build:web           # static web app in dist/web/ (serve over HTTPS)
 npm run test:e2e            # web app in Chromium against a simulated keyboard
-
-cd shells/electron
-npm install
-npm test                    # Electron shell tests
-npm start                   # builds the shared app, then starts Electron
+npm run tauri dev           # desktop app with hot reload (needs Rust)
+npm run tauri build         # desktop installer
 ```
 
 **Views**
@@ -76,88 +72,23 @@ npm start                   # builds the shared app, then starts Electron
 
 Runs in Chrome and Edge (WebHID); Firefox and Safari can edit the configuration but not connect keyboards. Keyboard access needs HTTPS (or `localhost`). The GitHub workflow `.github/workflows/web.yml` tests every push and publishes `master` to GitHub Pages once Pages is enabled (Settings → Pages → Source: GitHub Actions). The web app reads everything a backup needs, but only writes keys, encoders, layout options, combos, tap dance, key overrides and alt repeat keys; Vial keyboards only (not VIA-only firmware).
 
-Filesystem choices are represented in the renderer by opaque, window-scoped grants. Actual paths and file operations remain in Electron's main process.
+### Desktop app
 
-**Packaged builds** (in `shells/electron`, see `package.json`): `npm run dist`, `npm run dist:mac`, `npm run dist:win`. Each build first builds the shared app and stages the seed configuration and matching vitaly binary.
-
-### vitaly (online sync)
-
-The app resolves the vitaly binary in this order (development): `shells/electron/bin/vitaly` (or `.exe`), then a matching-OS build under `Reference only/vitaly-main/target/release/`, then `vitaly` on `PATH`. Production bundles ship vitaly under `resources/bin/`.
-
-Fetch a release binary into `shells/electron/bin/`:
-
-```bash
-cd shells/electron
-npm run fetch-vitaly
-```
-
-Build from source on the same OS you run Electron (Rust toolchain required for the vitaly project). You can also use `scripts/build-vitaly.sh` or `scripts/build-vitaly-docker.sh` when targeting Linux.
-
-**Note:** Identical USB product IDs can make device selection ambiguous; disconnect extras or rely on vitaly’s ordering when multiple boards match.
+A small Tauri app (`shells/tauri/`) loads the same shared app. Rust only passes raw HID messages and opens native file dialogs; file choices reach the app as opaque grants, never raw paths.
 
 ## Tips
 
 - If a character does not translate as expected, put the exact QMK expression in the JSON; it wins over the language tables.
 - Combo / tap-dance / key-override shapes must stay compatible with your firmware’s Vial feature limits.
 
-## Release and Distribution Pipeline (GitHub Actions)
+## Release pipeline (GitHub Actions)
 
-This repository uses a tag-triggered GitHub Actions workflow to build desktop artifacts for macOS and Windows.
-
-### 1) One-time setup (GitHub secrets)
-
-In your GitHub repository, add these secrets before creating a signed macOS release:
-
-- `APPLE_CERT_P12_BASE64` - Base64-encoded Developer ID Application certificate (`.p12`)
-- `APPLE_CERT_PASSWORD` - Password used when exporting the `.p12`
-- `APPLE_ID` - Your Apple ID email
-- `APPLE_APP_SPECIFIC_PASSWORD` - App-specific password from Apple ID settings
-- `APPLE_TEAM_ID` - Apple Developer Team ID
-
-Windows signing is optional. If you do not configure Windows signing, CI can still produce unsigned `.exe`/installer artifacts.
-
-### 2) Create a release tag
-
-Create and push a semantic version tag (for example `v0.2.0`) from your local repo:
+Pushing a version tag (for example `v0.2.0`) runs `.github/workflows/tauri-release.yml`. It builds installers for macOS (universal), Windows and Linux and attaches them to a draft GitHub release. Signing runs only when these secrets exist: `APPLE_CERT_P12_BASE64`, `APPLE_CERT_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`. Without them the installers are unsigned. A manual run attaches the installers to the run page instead.
 
 ```bash
 git tag v0.2.0
 git push origin v0.2.0
 ```
-
-This tag push triggers the workflow in `.github/workflows/gui-electron-release.yml`.
-
-### 3) What the workflow does
-
-- **macOS runner (`macos-latest`)**
-  - Installs dependencies at the repo root and in `shells/electron/`, runs tests
-  - Runs `npm run dist:mac`
-  - Signs the app with your Developer ID certificate
-  - Submits for notarization and staples the ticket (when Apple credentials are configured)
-  - Uploads macOS artifacts (`dmg`, `zip`)
-
-- **Windows runner (`windows-latest`)**
-  - Installs dependencies at the repo root and in `shells/electron/`, runs tests
-  - Runs `npm run dist:win`
-  - Builds native Windows artifacts on Windows (required for native modules such as `node-hid`)
-  - Uploads Windows artifacts (`nsis`, `zip`)
-
-- **Release job (`ubuntu-latest`, tags only)**
-  - Downloads both artifact bundles
-  - Creates/updates the GitHub Release for the tag
-  - Attaches macOS and Windows files to that release
-
-### 4) Download artifacts / release files
-
-After the workflow finishes:
-
-1. Open the workflow run in GitHub Actions.
-2. Download uploaded artifacts directly, or open the tag's GitHub Release.
-3. Share the generated installers/archives from the release assets.
-
-### 5) Why Windows is built on GitHub (not on macOS)
-
-Cross-compiling Electron apps with native Node modules from macOS to Windows is unreliable and often unsupported by `node-gyp`. The recommended approach is exactly what this pipeline does: build each platform on its native GitHub-hosted runner.
 
 ## License
 

@@ -1,5 +1,7 @@
 # Platform Plan: Web App + Small Desktop App
 
+> **Status: DONE and archived (2026-10-02).** Phases 0–3 are finished and Electron/vitaly are removed. Phase 4 (UI redesign) continues as a TODO in `docs/current-state.md`. Kept for history; the text below is not updated.
+
 Goal: one KeymapSync app that runs both in the browser (no install) and as a small
 desktop app (Tauri instead of Electron), with a streamlined feature set.
 

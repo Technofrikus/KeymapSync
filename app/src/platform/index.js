@@ -3,7 +3,7 @@
  *
  * The shared app never touches the file system or the keyboard directly; it
  * calls the platform object exported here. Each shell provides one adapter
- * (electron.js, tauri.js, web.js):
+ * (tauri.js, web.js):
  *
  *   getDefaults()                      -> { config: grant }
  *   chooseConfig()                     -> { grant, config } | null (cancelled)
@@ -25,13 +25,9 @@
  * A grant is an opaque { id, kind, displayPath } handle for a user-chosen
  * file; the app never sees or supplies raw paths.
  */
-import createElectronPlatform from './electron.js';
-
-// Electron's preload exposes `window.api`, Tauri exposes `window.__TAURI__`;
-// anywhere else this is the web shell. Adapters other than Electron's are
-// loaded on demand so each build stays lean.
+// Tauri exposes `window.__TAURI__`; anywhere else this is the web shell.
+// Adapters are loaded on demand so each build stays lean.
 async function detectPlatform() {
-  if (globalThis.api) return createElectronPlatform(globalThis.api);
   if (globalThis.__TAURI__) {
     const [{ default: createTauriPlatform }, { default: defaultConfig }] = await Promise.all([
       import('./tauri.js'),

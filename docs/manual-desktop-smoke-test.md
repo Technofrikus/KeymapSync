@@ -1,10 +1,10 @@
-# KeymapSync Electron and physical-keyboard smoke test
+# KeymapSync desktop app and physical-keyboard smoke test
 
-Run this checklist against a development build and one supported Vial keyboard before a release. Record the OS, Electron build, keyboard model/firmware, and result for each section. Use a disposable copy of the configuration and keep the initial backup until the final restore step.
+Run this checklist against a development build and one supported Vial keyboard before a release. Record the OS, desktop build, keyboard model/firmware, and result for each section. Use a disposable copy of the configuration and keep the initial backup until the final restore step.
 
 ## Preconditions
 
-- Start the packaged Electron app with the keyboard connected and unlocked.
+- Start the packaged desktop app with the keyboard connected and unlocked.
 - Keep a plain-text editor available for physical key checks.
 - Make a copy of the source configuration and note its UID, layer count, combos, tap dances, key overrides, and Vial settings.
 
@@ -45,4 +45,4 @@ Run this checklist against a development build and one supported Vial keyboard b
 
 ## Release evidence
 
-Attach the backup filename, keyboard/firmware details, screenshots or logs for any failure, and a completed checklist to the release record. A physical-keyboard test is not replaced by unit tests; rerun it after changes to IPC, transformation, online preview/apply, backup, or close/save behavior.
+Attach the backup filename, keyboard/firmware details, screenshots or logs for any failure, and a completed checklist to the release record. A physical-keyboard test is not replaced by unit tests; rerun it after changes to the desktop shell, transformation, online preview/apply, backup, or close/save behavior.

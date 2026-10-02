@@ -2,20 +2,19 @@
 
 ## Tech Stack
 - **Shared app**: plain JavaScript ES modules + DOM, bundled by **Vite** (`app/`).
-- **Electron** desktop shell (`shells/electron/`), using the **Rust** `vitaly` CLI for keyboard I/O.
+- **Tauri** desktop shell (`shells/tauri/`): Rust HID pass-through and file dialogs; the JS Vial protocol runs on top.
 - **Web** shell (`app/src/platform/web.js`): WebHID + the JS Vial protocol in `app/src/core/vial-protocol.js`.
 - **QMK/Vial** keyboard firmware protocols.
 
 ## Architecture
 - The shared app talks only to the platform interface (`app/src/platform/index.js`). Each shell implements it.
 - **Transformation**: `app/src/core/keymap-transform.js` is a pure Keymap State transform (no I/O), run in the app.
-- **Electron**: `shells/electron/main.js` exposes IPC handlers; `device-transport.js` owns the vitaly command protocol.
-- **Web**: `platform/index.js` loads `web.js` when `window.api` is missing. Keymap State JSON from the web shell must stay identical to `vitaly save` (fixture tests).
+- **Tauri**: `platform/tauri.js` calls Rust commands in `shells/tauri/src-tauri/src/` (`hid.rs`, `files.rs`).
+- **Web**: `platform/index.js` loads `web.js` when `window.__TAURI__` is missing. Keymap State JSON must stay identical to `vitaly save` output (recorded fixtures).
 
 ## Critical Rules (Do/Don't)
 - **DO NOT** use `JSON.parse` on `.vil` text if it contains a `uid`. Use `parseKeymapState` / `serializeKeymapState` in `app/src/core/keymap-state.js`.
-- **DO NOT** import Node or Electron APIs from `app/`. Platform access goes through the platform interface.
-- **DO** edit shared core modules in `app/src/core/` only; `shells/electron/core/` is a generated copy.
+- **DO NOT** import Node APIs from `app/`. Platform access goes through the platform interface.
 - **DO** verify keycodes using `keycode-mapping.js`.
 - **DO NOT** edit `app/src/core/vial-keycode-tables.js` by hand; regenerate it with `scripts/generate-vial-keycodes.mjs <vitaly checkout>`.
 - **DO** test keyboard protocol changes against the simulated keyboard (`app/test/support/simulated-vial-keyboard.js`).
@@ -25,18 +24,15 @@
 - `app/src/ui/editor-workflow.js`, `online-workflow.js`: Workflow-owned UI state and orchestration.
 - `app/src/core/config-validation.js`: Shared configuration validation.
 - `app/src/core/keymap-transform.js`: Keymap State transformation.
-- `shells/electron/main.js`: Electron lifecycle and IPC composition.
-- `shells/electron/file-authority.js`: Main-process file grants; renderer code never passes raw paths.
-- `shells/electron/device-transport.js`: Vitaly-backed device operations.
+- `app/src/platform/`: One adapter per shell (`web.js`, `tauri.js`).
+- `shells/tauri/src-tauri/src/`: Rust side of the desktop app.
 
 ## Relevant Documents
-- `docs/architecture.md`, `docs/project-structure.md`, `docs/platform-plan.md`.
+- `docs/architecture.md`, `docs/project-structure.md`, `docs/archive/platform-plan.md` (finished migration plan).
 
 ## Frequent Pitfalls
-- **Vitaly not found**: In dev, check `shells/electron/bin/`. In production, check `process.resourcesPath`.
-- **Stale renderer**: `npm start` in `shells/electron` rebuilds the app; when running Electron directly, run `node scripts/sync-shared.cjs --renderer` first.
+- **Desktop dev**: needs a Rust toolchain; use `npm run tauri dev`.
 
 ## Verification
 - Repo root: `npm install && npm test` (shared app tests).
 - Repo root: `npm run test:e2e` (web build in Chromium against the simulated keyboard).
-- `shells/electron`: `npm install && npm test` (shell tests).
