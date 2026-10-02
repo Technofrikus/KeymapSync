@@ -6,8 +6,23 @@
   },
   "layers": {
     "alpha": 0,
-    "symbol": 1,
-    "number": 2
+    "extra": [
+      {
+        "id": "layer1",
+        "name": "Symbols",
+        "index": 1
+      },
+      {
+        "id": "layer2",
+        "name": "Numbers",
+        "index": 2
+      },
+      {
+        "id": "layer3",
+        "name": "Navigation",
+        "index": 3
+      }
+    ]
   },
   "alphaMappings": {
     "Q": {
@@ -181,20 +196,20 @@
       "aliases": []
     },
     ".": {
-      "layer1": "",
-      "layer2": "",
+      "layer1": "NO",
+      "layer2": "NO",
       "base": null,
       "aliases": []
     },
     ",": {
       "layer1": "|",
-      "layer2": "",
+      "layer2": "NO",
       "base": null,
       "aliases": []
     },
     "-": {
-      "layer1": "",
-      "layer2": "",
+      "layer1": "NO",
+      "layer2": "NO",
       "base": null,
       "aliases": []
     }

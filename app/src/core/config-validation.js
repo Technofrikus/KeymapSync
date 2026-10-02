@@ -7,6 +7,9 @@
  * the desktop shells need to ship a JSON-schema engine.
  */
 
+import { MAX_EXTRA_LAYERS, MAX_LAYER_INDEX, getExtraLayers, isLayerId } from "./config-layers.js";
+import { charToKeycode, isValidKeycode } from "./keycode-mapping.js";
+
 const LANGUAGES = new Set(["de", "fr", "es", "en"]);
 const OPERATING_SYSTEMS = new Set(["mac", "win", "linux"]);
 const EXAMPLE_PROPERTIES = new Set([
@@ -95,10 +98,50 @@ function validateTarget(target, issues) {
   if (!OPERATING_SYSTEMS.has(target.os)) addIssue(issues, `${p}.os`, "must be one of mac, win, linux", "enum");
 }
 
+function validateExtraLayers(layers, issues) {
+  const p = "layers";
+  for (const key of Object.keys(layers)) {
+    if (key !== "alpha" && key !== "extra") addIssue(issues, propertyPath(p, key), "is not allowed together with layers.extra", "additionalProperties");
+  }
+  if (!Number.isInteger(layers.alpha) || layers.alpha < 0) addIssue(issues, `${p}.alpha`, "is required and must be a non-negative integer", "required");
+  const ep = `${p}.extra`;
+  if (layers.extra.length < 1 || layers.extra.length > MAX_EXTRA_LAYERS) {
+    addIssue(issues, ep, `must contain between 1 and ${MAX_EXTRA_LAYERS} layers`, "items");
+  }
+  const ids = new Set();
+  const indices = new Set([layers.alpha]);
+  layers.extra.forEach((layer, i) => {
+    const lp = indexPath(ep, i);
+    if (!isObject(layer)) {
+      addIssue(issues, lp, "must be an object", "type");
+      return;
+    }
+    for (const field of Object.keys(layer)) {
+      if (!["id", "name", "index"].includes(field)) addIssue(issues, propertyPath(lp, field), "is not allowed", "additionalProperties");
+    }
+    if (!isLayerId(layer.id)) addIssue(issues, `${lp}.id`, "must look like layer1, layer2, ...", "pattern");
+    else if (ids.has(layer.id)) addIssue(issues, `${lp}.id`, `duplicates another layer id: ${layer.id}`, "unique");
+    else ids.add(layer.id);
+    if (typeof layer.name !== "string" || layer.name.trim() === "" || layer.name.length > 40) {
+      addIssue(issues, `${lp}.name`, "must be a non-empty string of at most 40 characters", "type");
+    }
+    if (!Number.isInteger(layer.index) || layer.index < 0 || layer.index > MAX_LAYER_INDEX) {
+      addIssue(issues, `${lp}.index`, `must be an integer from 0 to ${MAX_LAYER_INDEX}`, "range");
+    } else if (indices.has(layer.index)) {
+      addIssue(issues, `${lp}.index`, "must differ from the alpha layer and every other layer", "unique");
+    } else indices.add(layer.index);
+  });
+}
+
 function validateLayers(layers, issues) {
   const p = "layers";
   if (!isObject(layers)) {
     addIssue(issues, p, "must be an object", "type");
+    return;
+  }
+  if (layers.extra !== undefined) {
+    if (!Array.isArray(layers.extra)) addIssue(issues, `${p}.extra`, "must be an array", "type");
+    else validateExtraLayers(layers, issues);
     return;
   }
   const allowed = new Set(["alpha", "symbol", "symbols", "number", "numbers"]);
@@ -119,7 +162,12 @@ function validateLayers(layers, issues) {
   }
 }
 
-function validateAlphaMappings(mappings, issues) {
+// Layer values may also use the editor's friendly names, e.g. Left, Alt+Bksp, MO1.
+function validLayerValue(value) {
+  return validKeycode(value, { allowLiteral: true }) || isValidKeycode(charToKeycode(value));
+}
+
+function validateAlphaMappings(mappings, issues, layerIds) {
   const p = "alphaMappings";
   if (!isObject(mappings)) {
     addIssue(issues, p, "must be an object", "type");
@@ -131,13 +179,18 @@ function validateAlphaMappings(mappings, issues) {
       addIssue(issues, mp, "must be an object", "type");
       continue;
     }
-    const allowed = new Set(["layer1", "layer2", "base", "aliases"]);
     for (const field of Object.keys(mapping)) {
-      if (!allowed.has(field)) addIssue(issues, propertyPath(mp, field), "is not allowed", "additionalProperties");
-    }
-    for (const field of ["layer1", "layer2"]) {
+      if (field === "base" || field === "aliases") continue;
+      if (!layerIds.has(field)) {
+        addIssue(issues, propertyPath(mp, field), isLayerId(field) ? "refers to a layer that is not defined in layers" : "is not allowed", "additionalProperties");
+        continue;
+      }
       const value = mapping[field];
-      if (value !== undefined && value !== null) validateString(value, issues, propertyPath(mp, field), { keycode: true, literal: true, allowEmpty: true });
+      if (value === undefined || value === null) continue;
+      validateString(value, issues, propertyPath(mp, field), { allowEmpty: true });
+      if (typeof value === "string" && value !== "" && !/\s/u.test(value) && !validLayerValue(value)) {
+        addIssue(issues, propertyPath(mp, field), `is not a valid keycode: ${value}`, "keycode");
+      }
     }
     if (mapping.base !== undefined && mapping.base !== null) validateString(mapping.base, issues, propertyPath(mp, "base"), { keycode: true, literal: true });
     if (mapping.aliases !== undefined) {
@@ -251,6 +304,13 @@ function validateTapDanceReferences(config, names, issues) {
   });
 }
 
+function configLayerIds(config) {
+  if (isObject(config.layers) && Array.isArray(config.layers.extra)) {
+    return new Set(config.layers.extra.filter((layer) => isObject(layer) && isLayerId(layer.id)).map((layer) => layer.id));
+  }
+  return new Set(getExtraLayers(config).map((layer) => layer.id));
+}
+
 function validateConfig(value) {
   const issues = [];
   if (!isObject(value)) {
@@ -265,7 +325,7 @@ function validateConfig(value) {
   if (value.mappingsVersion !== undefined && (!Number.isInteger(value.mappingsVersion) || value.mappingsVersion < 1)) addIssue(issues, "mappingsVersion", "must be a positive integer", "minimum");
   if (value.target === undefined) addIssue(issues, "target", "is required", "required"); else validateTarget(value.target, issues);
   if (value.layers === undefined) addIssue(issues, "layers", "is required", "required"); else validateLayers(value.layers, issues);
-  if (value.alphaMappings === undefined) addIssue(issues, "alphaMappings", "is required", "required"); else validateAlphaMappings(value.alphaMappings, issues);
+  if (value.alphaMappings === undefined) addIssue(issues, "alphaMappings", "is required", "required"); else validateAlphaMappings(value.alphaMappings, issues, configLayerIds(value));
   validateCombos(value.comboOverrides, issues);
   let names = new Map();
   if (value.tapDanceOverrides !== undefined) names = validateTapDances(value.tapDanceOverrides, issues);

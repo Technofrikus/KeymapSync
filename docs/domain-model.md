@@ -4,14 +4,14 @@
 
 | Entity | Description | Relationships |
 | :--- | :--- | :--- |
-| **Alpha Mapping** | Mapping of a base key (e.g. 'A') to symbols/numbers. | Part of `alpha_layers.json`. |
+| **Alpha Mapping** | Mapping of a base key (e.g. 'A') to its value on each extra layer. | Part of `alpha_layers.json`. |
 | **TapDance** | Advanced QMK function (Tap vs Hold). | Defined in `config` overrides. |
 | **Combo** | Multiple keys pressed at once. | Defined in `config` overrides. |
 | **Device** | A connected physical keyboard. | identified by Vendor/Product ID. |
 | **Keymap State** | The full matrix/tap-dance/combo config of a keyboard. | JSON object (matches `.vil`). |
 
 ## Business Logic
-- **Alpha Layer Sync**: Iterates over all keys on a "base" layer. If a key matches a character defined in `alphaMappings`, it sets its equivalents on Layer 1 (symbols) and Layer 2 (numbers).
+- **Alpha Layer Sync**: Iterates over all keys on a "base" layer. If a key matches a character defined in `alphaMappings`, it sets its value on every extra layer listed in `layers.extra` (by default Symbols, Numbers and Navigation).
 - **Symbol Translation**: Translates symbols (e.g. `(`) into OS/Language specific keycodes (e.g. `LSFT(KC_8)` for German Mac).
 
 ## Data Flows

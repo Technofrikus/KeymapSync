@@ -1,12 +1,12 @@
 # KeymapSync
 
-**Rule-based Vial keymap sync** for multiple keyboards: you define one JSON rule set (per-key layer assignments, language/OS translation context, and optional combo / tap-dance / key-override rules). The app applies those rules to each connected keyboard so symbol and number layers stay aligned with your alpha keys—without hand-editing every layout.
+**Rule-based Vial keymap sync** for multiple keyboards: you define one JSON rule set (per-key layer assignments, language/OS translation context, and optional combo / tap-dance / key-override rules). The app applies those rules to each connected keyboard so your symbol, number and other layers stay aligned with your alpha keys—without hand-editing every layout.
 
 ## How the rules work
 
 - **Alpha detection**: For each key on the alpha layer, the generator resolves which letter (or alias) it represents, using `alphaMappings` and optional `aliases` (e.g. tap-dance codes).
-- **Layer targets**: `layers.alpha`, `layers.symbol`, and `layers.number` choose which layout indices are updated. Each mapping’s **`layer1`** value is written to the **symbol** layer; **`layer2`** to the **number** layer.
-- **Translation rules**: Single-character entries are turned into QMK keycodes using built-in tables for `target.language` × `target.os` (e.g. `de` + `mac`). Raw QMK expressions (e.g. `LSFT(KC_MINUS)`) are passed through unchanged. `NO`, `TRNS` / `TRANSPARENT` are normalized to `KC_NO` / `KC_TRNS`.
+- **Layer targets**: `layers.alpha` is the layer with your letters. `layers.extra` lists any number of extra layers (default: Symbols, Numbers, Navigation); each has an `id`, a `name` and the keyboard layer `index` it writes to. A mapping’s value under a layer’s `id` (e.g. `layer3`) is written to that layer. An empty or missing value leaves the key unchanged.
+- **Translation rules**: Single-character entries are turned into QMK keycodes using built-in tables for `target.language` × `target.os` (e.g. `de` + `mac`). Key names and shortcuts such as `Left`, `Bksp`, `Alt+Bksp` or `MO1` are accepted too. Raw QMK expressions (e.g. `LSFT(KC_MINUS)`) are passed through unchanged. `NO`, `TRNS` / `TRANSPARENT` are normalized to `KC_NO` / `KC_TRNS`.
 - **Structural overrides**: `comboOverrides`, `tapDanceOverrides`, and `keyOverrideOverrides` replace or extend the corresponding Vial arrays with merge semantics.
 - **Tap-dance names**: You can use `TD(MyName)` in mappings when `tapDanceOverrides` defines `"name": "MyName"`; the generator resolves names to `TD(0)`, `TD(1)`, … before writing or syncing.
 
@@ -38,10 +38,9 @@ Optional `mappingsVersion` in the config is reserved for future format evolution
 ## `alpha_layers.json`
 
 - **`target`**: `language` (`de`, `fr`, `es`, `en`, …) and `os` (`mac`, `win`, `linux`).
-- **`layers`**: Indices for `alpha`, `symbol`, `number` (aliases `symbols` / `numbers` accepted).
+- **`layers`**: `alpha` index plus `extra`, a list of `{ "id": "layer1", "name": "Symbols", "index": 1 }` entries (up to 16). Older files with `symbol` / `number` (aliases `symbols` / `numbers`) still load; the editor saves them in the new form.
 - **`alphaMappings`**: Keys are letters or row spacers (`_row2`, `_row3`). Each entry may include:
-  - `layer1` → symbol layer keycode
-  - `layer2` → number layer keycode
+  - `layer1`, `layer2`, … → the value for the extra layer with that `id`
   - `base` → optional replacement on the alpha layer (e.g. tap dance)
   - `aliases` → extra keycodes that count as this letter for matching
 - **`comboOverrides`**: Objects with `keys` (up to four) and `result`; converted to Vial’s five-element combo rows.
@@ -65,7 +64,7 @@ npm run tauri build         # desktop installer
 
 **Views**
 
-1. **Keymap** — Edit the rule tables, pick physical layout ordering, save `alpha_layers.json`.
+1. **Keymap** — Tabs for Keys, Tap Dance and Combos. On Keys, add, rename or remove layers, and edit them as a table or on a keyboard picture, ordered as QWERTY, Dvorak, Colemak or alphabetically. Suggestions and the bar at the bottom show what each field sends; **? Help** (or the `?` key) opens the searchable keycode reference. Save writes `alpha_layers.json`.
 2. **Online sync** — Select a device, preview merged layout, apply to the keyboard. In the web app, **Connect keyboard…** asks the browser for access first.
 
 ### Web app

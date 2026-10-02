@@ -5,6 +5,8 @@
  * makes the editor independent of the IPC authority implementation and keeps
  * selecting a file and loading its contents one atomic transition.
  */
+import { upgradeConfig } from '../core/config-layers.js';
+
 export default function createConfigSession(options = {}) {
   const api = options.api;
   const onChange = options.onChange || (() => {});
@@ -36,7 +38,7 @@ export default function createConfigSession(options = {}) {
       nextConfig = typeof response.content === 'string' ? JSON.parse(response.content) : response.content;
     }
     if (nextConfig == null) throw new Error('Configuration contents are missing.');
-    setState(nextConfig, nextGrant, true);
+    setState(upgradeConfig(nextConfig), nextGrant, true);
     return getState();
   }
 

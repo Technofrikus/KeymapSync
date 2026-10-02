@@ -5,10 +5,11 @@
     - `index.html`, `styles.css`: UI markup and styles.
     - `src/main.js`: Composition root and view navigation.
     - `src/platform/`: Platform interface (`index.js`) and one adapter per shell: `web.js` (with `webhid-transport.js` and `decompress.js`), `tauri.js`.
-    - `src/ui/`: `editor-workflow.js`, `online-workflow.js`, `config-session.js`, `keymap-presentation.js`.
+    - `src/ui/`: `editor-workflow.js` (file controls, logs), `keymap-editor.js` (Keys / Tap Dance / Combos tabs), `keycode-help.js` (suggestions, context bar, help drawer), `keycode-reference.js`, `field-preview.js`, `key-order.js`, `online-workflow.js`, `config-session.js`, `keymap-presentation.js`.
     - `src/core/`: Pure logic with no DOM, file or device access:
         - `keymap-transform.js`: Keymap State transformation (Alpha Mappings, overrides, translation tables).
         - `config-validation.js`, `alpha-layers.schema.json`: Configuration validation.
+        - `config-layers.js`: Extra layers (`layers.extra`) and the upgrade from the old symbol/number form.
         - `keymap-state.js`: UID-safe `.vil` parse/serialize.
         - `vial-definition.js`: Transport-independent Vial definition protocol.
         - `vial-protocol.js`: Transport-independent Vial keyboard protocol (snapshot/apply/unlock).

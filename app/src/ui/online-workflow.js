@@ -230,6 +230,9 @@ export default function createOnlineWorkflow(options = {}) {
         const transformation = transform(state.currentDeviceState, config);
         state.targetDeviceState = normalizeForKeyboard(state.currentDeviceState, transformation.state);
         (transformation.warnings || []).forEach((warning) => mountOptions.log?.(`Warning: untranslated symbol ${warning}\n`));
+        (transformation.missingLayers || []).forEach((layer) => mountOptions.log?.(
+          `Warning: layer "${layer.name}" writes to keyboard layer ${layer.index}, but this keyboard only has layers 0-${layer.keyboardLayerCount - 1}. It is skipped.\n`,
+        ));
         const diff = calculateDiff(state.currentDeviceState, state.targetDeviceState, {
           getMatrixCell: presentation.getMatrixCell,
           keycodeToChar: keycodeToLabel,

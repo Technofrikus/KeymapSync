@@ -6,12 +6,13 @@
 - **Advanced Overrides**: Support for Tap-Dance, Combos, and Key-Overrides.
 
 ## Recently Changed / Hot Modules
+- Keymap editor redesign: tabs, any number of extra layers (default 3), table and keyboard views, keycode suggestions, context bar and a help drawer. Old configs with `symbol` / `number` layers are upgraded on load.
 - Electron and the vitaly scripts are removed; the desktop app is Tauri only (`shells/tauri/`).
 - The platform migration plan is finished and archived: `docs/archive/platform-plan.md`.
 - `app/src/core/vial-protocol.js`: the one keyboard implementation for web and desktop.
 
 ## Large TODOs / Future Work
-- [ ] **UI redesign (next)**: collect what's not working per screen, define the main flow (connect keyboard -> review mappings -> preview changes -> write), then redesign in the shared app (`app/index.html`, `app/styles.css`, `app/src/ui/`). Both shells get it.
+- [ ] **UI redesign**: the Keymap editor is done; Online Sync and the top bar are next.
 - [ ] Improved translation for more languages.
 - [ ] Better validation for Tap-Dance/Combo loops.
 - [ ] Run `docs/manual-web-smoke-test.md` on real keyboards, then enable GitHub Pages.

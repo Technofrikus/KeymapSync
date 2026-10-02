@@ -5,7 +5,7 @@ KeymapSync keeps compatible keyboards aligned through shared character mappings 
 ## Language
 
 **Alpha Mapping**:
-A mapping from a base key to its corresponding symbol and number values for a keyboard target.
+A mapping from a base key to its values on each extra layer (symbols, numbers, …) for a keyboard target.
 _Avoid_: character table, key translation
 
 **Keymap State**:

@@ -1,7 +1,7 @@
 # Architecture - KeymapSync
 
 ## High-Level System Overview
-KeymapSync is a configuration management tool for Vial-compatible keyboards. It enables users to maintain unified character-to-symbol/number mappings across multiple keyboards.
+KeymapSync is a configuration management tool for Vial-compatible keyboards. It enables users to maintain unified mappings from each alpha key to its symbols, numbers and other layers across multiple keyboards.
 
 ## Main Modules
 - **Shared app (`app/`)**: Browser code bundled by Vite. `src/main.js` composes the editor and online workflow modules. `keymap-presentation.js` prepares KLE geometry and renders keyboard previews. All file and device access goes through the platform interface (`src/platform/index.js`).

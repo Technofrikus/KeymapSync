@@ -80,10 +80,17 @@
       "required": ["language", "os"]
     },
     "layers": {
+      "description": "Either the current form (alpha + extra) or the legacy form (alpha + symbol + number).",
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "alpha": { "type": "integer", "minimum": 0 },
+        "extra": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": { "$ref": "#/definitions/extraLayer" }
+        },
         "symbol": { "type": "integer", "minimum": 0 },
         "symbols": { "type": "integer", "minimum": 0 },
         "number": { "type": "integer", "minimum": 0 },
@@ -91,12 +98,32 @@
       },
       "required": ["alpha"]
     },
-    "alphaMapping": {
+    "extraLayer": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "layer1": { "$ref": "#/definitions/mappingValue" },
-        "layer2": { "$ref": "#/definitions/mappingValue" },
+        "id": {
+          "description": "Field name used for this layer in every alpha mapping.",
+          "type": "string",
+          "pattern": "^layer[1-9][0-9]*$"
+        },
+        "name": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "index": {
+          "description": "Keyboard layer this layer writes to.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31
+        }
+      },
+      "required": ["id", "name", "index"]
+    },
+    "alphaMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^layer[1-9][0-9]*$": { "$ref": "#/definitions/mappingValue" }
+      },
+      "properties": {
         "base": { "$ref": "#/definitions/nullableKeycode" },
         "aliases": {
           "type": "array",

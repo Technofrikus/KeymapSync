@@ -1,6 +1,6 @@
 /**
  * Keymap State transformation module.
- * - Applies per-letter symbol/number layers (layer1/layer2) from an Alpha Mapping config
+ * - Applies per-letter extra layers (symbols, numbers, ...) from an Alpha Mapping config
  * - Optionally replaces alpha keys with tap-dance or other codes via `base`
  * - Optionally overrides combos, tap_dance, key_override sections
  *
@@ -8,6 +8,8 @@
  */
 
 import { assertValidConfig } from "./config-validation.js";
+import { getExtraLayers } from "./config-layers.js";
+import { charToKeycode, isValidKeycode } from "./keycode-mapping.js";
 
 // Translation tables for plain KC_* output (no locale-specific keycodes)
 // Language codes: de, fr, es, en; OS codes: mac, win, linux
@@ -428,6 +430,11 @@ function translateSymbol(value, target, warnings) {
     return value;
   }
   const single = value.length === 1 ? value : null;
+  // Friendly names such as Left, Bksp, Alt+Bksp or MO1.
+  if (!single && typeof value === "string") {
+    const keycode = charToKeycode(value);
+    if (isValidKeycode(keycode)) return keycode;
+  }
   const table = translationTables[targetKey(target)] || {};
   if (single) {
     // Numbers
@@ -509,27 +516,28 @@ function mergeArrayOverride(targetArr, overrideArr) {
   return result;
 }
 
-function applyAlphaMappings(doc, config, runId) {
+function hasLayerValue(alphaMappings, layerId) {
+  return Object.values(alphaMappings).some((mapping) => (
+    mapping && mapping[layerId] !== undefined && mapping[layerId] !== null
+  ));
+}
+
+function applyAlphaMappings(doc, config, runId, missingLayers = []) {
   const { alphaMappings, layers, target } = config;
   if (!alphaMappings) return [];
   const aliasMap = buildAliasMap(alphaMappings);
   const alphaLayerIdx = layers.alpha ?? 0;
-  // Map layer1/2 strictly by their numeric indices: 1 stays 1, 2 stays 2.
-  const symbolLayerIdx = layers.symbol ?? layers.symbols ?? 1; // mapping.layer1 content goes here
-  const numberLayerIdx = layers.number ?? layers.numbers ?? 2; // mapping.layer2 content goes here
+  const keyboardLayerCount = doc.layout.length;
+  // Each extra layer writes its mapping field (layer1, layer2, ...) to its own
+  // keyboard layer index.
+  const extraLayers = getExtraLayers(config).filter((layer) => hasLayerValue(alphaMappings, layer.id));
+  for (const layer of extraLayers) {
+    if (layer.index >= keyboardLayerCount) missingLayers.push({ ...layer, keyboardLayerCount });
+    ensureLayer(doc.layout, layer.index);
+  }
 
-  ensureLayer(doc.layout, symbolLayerIdx);
-  ensureLayer(doc.layout, numberLayerIdx);
-
-  let replaced = 0;
-  let fallbackSymbol = 0;
-  let fallbackNumber = 0;
   const missingSymbols = new Set();
-
   const alphaLayer = doc.layout[alphaLayerIdx];
-  const symbolLayer = doc.layout[symbolLayerIdx];
-  const numberLayer = doc.layout[numberLayerIdx];
-
   if (!alphaLayer) return [];
 
   for (let r = 0; r < alphaLayer.length; r++) {
@@ -541,24 +549,15 @@ function applyAlphaMappings(doc, config, runId) {
       if (!mapping) continue;
 
       const warnList = [];
-      const layer1Code = translateSymbol(mapping.layer1, target, warnList);
-      const layer2Code = translateSymbol(mapping.layer2, target, warnList);
+      const codes = extraLayers.map((layer) => translateSymbol(mapping[layer.id], target, warnList));
       warnList.forEach((s) => missingSymbols.add(s));
 
       if (mapping.base) {
         alphaLayer[r][c] = mapping.base;
       }
-      if (layer1Code) {
-        symbolLayer[r][c] = layer1Code;
-      } else {
-        fallbackSymbol++;
-      }
-      if (layer2Code) {
-        numberLayer[r][c] = layer2Code;
-      } else {
-        fallbackNumber++;
-      }
-      replaced++;
+      extraLayers.forEach((layer, i) => {
+        if (codes[i]) doc.layout[layer.index][r][c] = codes[i];
+      });
     }
   }
 
@@ -630,10 +629,11 @@ function normalizeTapDanceKeycodesInDoc(doc, config) {
 function transformKeymapState(keymapState, alphaMapping, runId = null) {
   assertValidConfig(alphaMapping, "transformation config");
   const state = structuredClone(keymapState);
-  const warnings = applyAlphaMappings(state, alphaMapping, runId);
+  const missingLayers = [];
+  const warnings = applyAlphaMappings(state, alphaMapping, runId, missingLayers);
   applyOverrides(state, alphaMapping, runId);
   normalizeTapDanceKeycodesInDoc(state, alphaMapping);
-  return { state, warnings };
+  return { state, warnings, missingLayers };
 }
 
 function processConfig(keymapState, alphaMapping, runId = null) {
