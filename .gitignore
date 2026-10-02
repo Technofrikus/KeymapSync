@@ -1,11 +1,13 @@
 .DS_Store
 node_modules/
-gui-electron/node_modules/
+shells/electron/node_modules/
 dist/
-gui-electron/dist/
-gui-electron/bin/
-# Build artefact — copied from root by prep-dist.js during packaging.
-gui-electron/alpha_layers.json
+shells/electron/dist/
+shells/electron/bin/
+# Build artefacts — generated from app/ and the repo root by shells/electron/scripts.
+shells/electron/alpha_layers.json
+shells/electron/core/
+shells/electron/renderer/
 # Local reference trees only — not versioned (see README if you sync reference copies).
 Reference only/
 .git-filter-repo-replacements.txt

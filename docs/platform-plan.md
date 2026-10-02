@@ -50,13 +50,15 @@ Small, low risk, makes every later phase smaller.
 
 Done when: app works with Editor + Online Sync only, tests green, smoke test passes.
 
-## Phase 1 — Separate the shared app from Electron
+## Phase 1 — Separate the shared app from Electron — done
 
-- Move shared UI and logic into `app/` (or `src/`), shells into `shells/web/` and
-  `shells/desktop/`. Electron stays as the desktop shell during this phase.
+- Move shared UI and logic into `app/`, the Electron shell into `shells/electron/`.
+  Electron stays as the desktop shell during this phase.
 - Convert shared modules from Node style (`require`, `Buffer`) to browser-ready
-  ES modules (`import`, `Uint8Array`). Decompression: replace `lzma`/`xz-decompress`
-  Node usage with a browser-compatible build of the same library.
+  ES modules (`import`, `Uint8Array`). The Vial definition protocol is now shared
+  (`app/src/core/vial-definition.js`) with the HID transport and decompressors
+  injected; picking browser builds of `lzma`/`xz-decompress` moves to Phase 2.
+- Run the keymap transformation in the app instead of the Electron main process.
 - Define the platform interface (table above) as one file; Electron implements it
   via the existing IPC.
 - Add a simple bundler (Vite) so the same source builds for web and desktop.

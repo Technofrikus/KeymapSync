@@ -1,43 +1,37 @@
 # Agent Bootstrap - KeymapSync
 
 ## Tech Stack
-- **Electron** (Node.js + DOM JS)
-- **Rust** (`vitaly` CLI tool)
-- **QMK/Vial** (Keyboard firmware protocols)
+- **Shared app**: plain JavaScript ES modules + DOM, bundled by **Vite** (`app/`).
+- **Electron** desktop shell (`shells/electron/`), using the **Rust** `vitaly` CLI for keyboard I/O.
+- **QMK/Vial** keyboard firmware protocols.
 
 ## Architecture
-- **Transformation**: `gui-electron/generate_vial_keymaps.js` is a pure Keymap State transform (no I/O).
-- **Online**: `main.js` exposes IPC handlers, while `device-transport.js` owns the Vitaly command protocol.
+- The shared app talks only to the platform interface (`app/src/platform/index.js`). Each shell implements it.
+- **Transformation**: `app/src/core/keymap-transform.js` is a pure Keymap State transform (no I/O), run in the app.
+- **Electron**: `shells/electron/main.js` exposes IPC handlers; `device-transport.js` owns the vitaly command protocol.
 
 ## Critical Rules (Do/Don't)
-- **DO NOT** use `JSON.parse` on `.vil` files directly if they contain a `uid`. Use `parseKeymapState` / `serializeKeymapState` in `device-transport.js`.
+- **DO NOT** use `JSON.parse` on `.vil` text if it contains a `uid`. Use `parseKeymapState` / `serializeKeymapState` in `app/src/core/keymap-state.js`.
+- **DO NOT** import Node or Electron APIs from `app/`. Platform access goes through the platform interface.
+- **DO** edit shared core modules in `app/src/core/` only; `shells/electron/core/` is a generated copy.
 - **DO** verify keycodes using `keycode-mapping.js`.
-- **DO** use `createDeviceTransport` in `device-transport.js` for Vitaly operations; `main.js` supplies the process and path dependencies.
 
 ## Quick Start Nav
-- `gui-electron/main.js`: Electron lifecycle and IPC composition.
-- `gui-electron/renderer.js`: Renderer composition and navigation.
-- `gui-electron/editor-workflow.js`, `online-workflow.js`: Workflow-owned UI state and orchestration.
-- `gui-electron/config-validation.js`: Shared configuration validation.
-- `gui-electron/file-authority.js`: Main-process filesystem grants; renderer code must never pass raw paths.
-- `gui-electron/generate_vial_keymaps.js`: Shared Keymap State transformation.
-- `gui-electron/device-transport.js`: Vitaly-backed device operations.
-- `alpha_layers.json`: Data schema for character mappings.
+- `app/src/main.js`: App composition and navigation.
+- `app/src/ui/editor-workflow.js`, `online-workflow.js`: Workflow-owned UI state and orchestration.
+- `app/src/core/config-validation.js`: Shared configuration validation.
+- `app/src/core/keymap-transform.js`: Keymap State transformation.
+- `shells/electron/main.js`: Electron lifecycle and IPC composition.
+- `shells/electron/file-authority.js`: Main-process file grants; renderer code never passes raw paths.
+- `shells/electron/device-transport.js`: Vitaly-backed device operations.
 
 ## Relevant Documents
-- See `docs/architecture.md` for deep dive.
-- See `docs/project-structure.md` for file locations.
-- See `docs/platform-plan.md` for the web/Tauri roadmap.
+- `docs/architecture.md`, `docs/project-structure.md`, `docs/platform-plan.md`.
 
 ## Frequent Pitfalls
-- **Vitaly not found**: In Dev, check `gui-electron/bin/`. In Prod, check `process.resourcesPath`.
-- **Large Integers**: JSON stringification of `uid` (64-bit int) will fail in JS. Handled via regex-based string injection.
-
-## If you want to change X, check Y first:
-- **Change Mappings**: Check `alpha_layers.json` schema.
-- **Add Keycode**: Check `keycode-mapping.js`.
-- **Add Translation**: Check `translationTables` in `gui-electron/generate_vial_keymaps.js`.
+- **Vitaly not found**: In dev, check `shells/electron/bin/`. In production, check `process.resourcesPath`.
+- **Stale renderer**: `npm start` in `shells/electron` rebuilds the app; when running Electron directly, run `node scripts/sync-shared.cjs --renderer` first.
 
 ## Verification
-
-From `gui-electron/`, run `npm test`. It executes the transformation, device transport, and keyboard-presentation regression scripts.
+- Repo root: `npm install && npm test` (shared app tests).
+- `shells/electron`: `npm install && npm test` (shell tests).

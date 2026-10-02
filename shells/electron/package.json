@@ -1,0 +1,88 @@
+{
+  "name": "keymapsync-gui",
+  "version": "0.1.0",
+  "description": "Electron desktop shell for KeymapSync",
+  "main": "main.js",
+  "scripts": {
+    "sync-shared": "node scripts/sync-shared.cjs",
+    "prestart": "node scripts/sync-shared.cjs --renderer",
+    "start": "electron .",
+    "pretest": "node scripts/sync-shared.cjs",
+    "test": "node --test \"*.test.js\"",
+    "dist": "node scripts/prep-dist.cjs && electron-builder --publish never",
+    "dist:mac": "node scripts/prep-dist.cjs && electron-builder --mac --publish never",
+    "dist:win": "node scripts/prep-dist.cjs --win && electron-builder --win --x64 --publish never",
+    "rebuild": "electron-builder install-app-deps",
+    "fetch-vitaly": "node scripts/fetch-vitaly.cjs",
+    "fetch-vitaly:win": "node scripts/fetch-vitaly.cjs --win",
+    "fetch-vitaly:all": "node scripts/fetch-vitaly.cjs --all"
+  },
+  "build": {
+    "appId": "com.keymapsync.gui",
+    "productName": "KeymapSync",
+    "icon": "KSiconReal.png",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.cjs",
+      "device-transport.js",
+      "file-authority.js",
+      "hid-definition.js",
+      "core/**",
+      "renderer/**",
+      "alpha_layers.json",
+      "KSiconReal.png",
+      "package.json"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/node-hid/**",
+      "**/node_modules/lzma-native/**"
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.utilities",
+      "extraResources": [
+        {
+          "from": "bin/vitaly",
+          "to": "bin/vitaly"
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "extraResources": [
+        {
+          "from": "bin/vitaly.exe",
+          "to": "bin/vitaly.exe"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "differentialPackage": false
+    }
+  },
+  "author": "",
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "lzma": "^2.3.2",
+    "node-hid": "^3.3.0",
+    "xz-decompress": "^0.2.3"
+  },
+  "devDependencies": {
+    "electron": "^39.8.6",
+    "electron-builder": "^26.8.1",
+    "electron-reload": "^2.0.0-alpha.1"
+  },
+  "type": "module"
+}

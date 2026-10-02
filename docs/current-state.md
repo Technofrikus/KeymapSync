@@ -6,16 +6,17 @@
 - **Advanced Overrides**: Support for Tap-Dance, Combos, and Key-Overrides.
 
 ## Recently Changed / Hot Modules
-- `gui-electron/editor-workflow.js`, `online-workflow.js`: Separate renderer workflows composed by a small `renderer.js`.
-- `gui-electron/config-validation.js`: Shared schema and semantic validation for every configuration ingress.
-- `gui-electron/file-authority.js`: Owner-scoped filesystem grants for renderer IPC.
-- `gui-electron/generate_vial_keymaps.js`: Shared translation tables (de, fr, es, en), and pure transformation logic.
-- `gui-electron/device-transport.js`: Vitaly device protocol, including discovery, snapshots, applying state, locking, and layout lookup.
+- Repository split into the shared app (`app/`) and the Electron shell (`shells/electron/`); see `docs/platform-plan.md` (Phase 1).
+- `app/src/platform/index.js`: Platform interface implemented by each shell.
+- `app/src/core/keymap-transform.js`: Translation tables (de, fr, es, en) and pure transformation logic, now run in the app.
+- `app/src/core/vial-definition.js`: Transport-independent Vial definition protocol (ready for WebHID).
+- `shells/electron/device-transport.js`: Vitaly device protocol, including discovery, snapshots, applying state, locking, and layout lookup.
 
 ## Large TODOs / Future Work
 - [ ] Improved translation for more languages.
 - [ ] Better validation for Tap-Dance/Combo loops.
-- [ ] Multi-platform build automation refinement.
+- [ ] Web shell with WebHID (`docs/platform-plan.md`, Phase 2).
+- [ ] Tauri desktop shell replacing Electron (Phase 3).
 
 ## Known Issues
 - Vitaly can exit 0 for some failures; `device-transport.js` treats known fatal stderr output as an error.

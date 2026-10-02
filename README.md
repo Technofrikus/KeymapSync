@@ -26,8 +26,9 @@ Optional `mappingsVersion` in the config is reserved for future format evolution
 | Path | Role |
 |------|------|
 | `alpha_layers.json` | Rule configuration (edit this or use the GUI). |
-| `gui-electron/` | Electron app (`npm install`, `npm start`). |
-| `gui-electron/alpha-layers.schema.json` | Machine-readable configuration schema used alongside semantic validation. |
+| `app/` | Shared app (screens, rules, validation), built with Vite and used by every shell. |
+| `app/src/core/alpha-layers.schema.json` | Machine-readable configuration schema used alongside semantic validation. |
+| `shells/electron/` | Electron desktop shell (`npm install`, `npm start`). |
 | `docs/platform-plan.md` | Roadmap: shared app with web (WebHID) and Tauri desktop shells. |
 | `docs/manual-electron-smoke-test.md` | Release checklist for backup, physical key overrides, selective apply, and close/save behavior. |
 
@@ -45,13 +46,18 @@ Optional `mappingsVersion` in the config is reserved for future format evolution
 - **`keyOverrideOverrides`**: Objects merged into `key_override` with `trigger` / `replacement` translation where applicable.
 - **`*Example` keys**: Reference shapes only; not applied unless copied into the live `*Overrides` arrays.
 
-## GUI (`gui-electron/`)
+## Development
+
+Requires Node 22+.
 
 ```bash
-cd gui-electron
+npm install                 # repo root: shared app + Vite
+npm test                    # shared app tests
+
+cd shells/electron
 npm install
-npm test
-npm start
+npm test                    # Electron shell tests
+npm start                   # builds the shared app, then starts Electron
 ```
 
 **Views**
@@ -61,16 +67,16 @@ npm start
 
 Filesystem choices are represented in the renderer by opaque, window-scoped grants. Actual paths and file operations remain in Electron's main process.
 
-**Packaged builds** (see `package.json`): `npm run dist`, `npm run dist:mac`, `npm run dist:win`. Each platform-specific build stages the seed configuration and matching Vitaly binary first.
+**Packaged builds** (in `shells/electron`, see `package.json`): `npm run dist`, `npm run dist:mac`, `npm run dist:win`. Each build first builds the shared app and stages the seed configuration and matching vitaly binary.
 
 ### vitaly (online sync)
 
-The app resolves the vitaly binary in this order (development): `gui-electron/bin/vitaly` (or `.exe`), then a matching-OS build under `Reference only/vitaly-main/target/release/`, then `vitaly` on `PATH`. Production bundles ship vitaly under `resources/bin/`.
+The app resolves the vitaly binary in this order (development): `shells/electron/bin/vitaly` (or `.exe`), then a matching-OS build under `Reference only/vitaly-main/target/release/`, then `vitaly` on `PATH`. Production bundles ship vitaly under `resources/bin/`.
 
-Fetch a release binary into `gui-electron/bin/`:
+Fetch a release binary into `shells/electron/bin/`:
 
 ```bash
-cd gui-electron
+cd shells/electron
 npm run fetch-vitaly
 ```
 
@@ -113,14 +119,14 @@ This tag push triggers the workflow in `.github/workflows/gui-electron-release.y
 ### 3) What the workflow does
 
 - **macOS runner (`macos-latest`)**
-  - Installs dependencies in `gui-electron/`
+  - Installs dependencies at the repo root and in `shells/electron/`, runs tests
   - Runs `npm run dist:mac`
   - Signs the app with your Developer ID certificate
   - Submits for notarization and staples the ticket (when Apple credentials are configured)
   - Uploads macOS artifacts (`dmg`, `zip`)
 
 - **Windows runner (`windows-latest`)**
-  - Installs dependencies in `gui-electron/`
+  - Installs dependencies at the repo root and in `shells/electron/`, runs tests
   - Runs `npm run dist:win`
   - Builds native Windows artifacts on Windows (required for native modules such as `node-hid`)
   - Uploads Windows artifacts (`nsis`, `zip`)
