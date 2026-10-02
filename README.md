@@ -1,6 +1,6 @@
 # KeymapSync
 
-**Rule-based Vial keymap sync** for multiple keyboards: you define one JSON rule set (per-key layer assignments, language/OS translation context, and optional combo / tap-dance / key-override rules). The tool applies those rules to each board’s `.vil` layout so symbol and number layers stay aligned with your alpha keys—without hand-editing every file.
+**Rule-based Vial keymap sync** for multiple keyboards: you define one JSON rule set (per-key layer assignments, language/OS translation context, and optional combo / tap-dance / key-override rules). The app applies those rules to each connected keyboard so symbol and number layers stay aligned with your alpha keys—without hand-editing every layout.
 
 ## How the rules work
 
@@ -16,12 +16,10 @@ Optional `mappingsVersion` in the config is reserved for future format evolution
 
 | Capability | Description |
 |------------|-------------|
-| **Batch `.vil` generation** | Read every `.vil` in `original/`, apply rules, write `*_edited.vil` to `output/` (originals unchanged). |
-| **CLI** | `node generate_vial_keymaps.js` from repo root (Node 18+). No npm dependencies for the generator. |
+| **Web app** | The same app in Chrome or Edge, no install: talks to the keyboard directly over WebHID. Configuration is kept in the browser or in a file you pick. |
 | **Electron GUI** | Visual editor for alpha table, combos, and tap dances; schema-validated configuration; configurable paths; logs; unsaved-change guard. |
 | **Layout sorting** | Editor can order keys as QWERTY, Dvorak, Colemak, or alphabetical—cosmetic only; rules are still keyed by letter. |
-| **Offline sync** | Run the same generation as the CLI from the app with chosen input/output folders. |
-| **Online sync** | Talk to a connected Vial keyboard over USB via [vitaly](https://github.com/bskaplou/vitaly): list devices, dump live JSON, merge preview, write back, optional EEPROM lock. stderr is interpreted so failures surface even when vitaly exits 0. |
+| **Online sync** | Talk to a connected Vial keyboard over USB: list devices, dump live JSON, merge preview, write back. The desktop app uses [vitaly](https://github.com/bskaplou/vitaly); the web app speaks the Vial protocol itself and produces the same JSON. |
 | **Keyboard geometry** | Fetch compressed KLE-style definitions from the device (Vial HID) to preview layouts and place keys visually in the online flow. |
 
 ## Repository layout
@@ -29,13 +27,13 @@ Optional `mappingsVersion` in the config is reserved for future format evolution
 | Path | Role |
 |------|------|
 | `alpha_layers.json` | Rule configuration (edit this or use the GUI). |
-| `original/` | Source `.vil` files (one per keyboard). |
-| `output/` | Generated `*_edited.vil` files. |
-| `generate_vial_keymaps.js` | Command-line adapter for the shared transformation module in `gui-electron/`. |
-| `generate_vial_keymaps.test.js` | Regression checks for the shared transformation module. Run all GUI tests with `cd gui-electron && npm test`. |
-| `gui-electron/` | Electron app (`npm install`, `npm start`). |
-| `gui-electron/alpha-layers.schema.json` | Machine-readable configuration schema used alongside semantic validation. |
+| `app/` | Shared app (screens, rules, validation), built with Vite and used by every shell. |
+| `app/src/core/alpha-layers.schema.json` | Machine-readable configuration schema used alongside semantic validation. |
+| `app/src/platform/web.js` | Web shell (WebHID); built with `npm run build:web` into `dist/web/`. |
+| `shells/electron/` | Electron desktop shell (`npm install`, `npm start`). |
+| `docs/platform-plan.md` | Roadmap: shared app with web (WebHID) and Tauri desktop shells. |
 | `docs/manual-electron-smoke-test.md` | Release checklist for backup, physical key overrides, selective apply, and close/save behavior. |
+| `docs/manual-web-smoke-test.md` | Checklist for the web app on a physical keyboard, including a comparison with vitaly. |
 
 ## `alpha_layers.json`
 
@@ -51,43 +49,44 @@ Optional `mappingsVersion` in the config is reserved for future format evolution
 - **`keyOverrideOverrides`**: Objects merged into `key_override` with `trigger` / `replacement` translation where applicable.
 - **`*Example` keys**: Reference shapes only; not applied unless copied into the live `*Overrides` arrays.
 
-## Command line
+## Development
 
-From the repository root:
-
-```bash
-node generate_vial_keymaps.js
-```
-
-Check `output/` for updated files; import in Vial or use online sync from the GUI.
-
-## GUI (`gui-electron/`)
+Requires Node 22+.
 
 ```bash
-cd gui-electron
+npm install                 # repo root: shared app + Vite
+npm test                    # shared app tests
+npm run dev                 # web app with hot reload (open in Chrome/Edge)
+npm run build:web           # static web app in dist/web/ (serve over HTTPS)
+npm run test:e2e            # web app in Chromium against a simulated keyboard
+
+cd shells/electron
 npm install
-npm test
-npm start
+npm test                    # Electron shell tests
+npm start                   # builds the shared app, then starts Electron
 ```
 
 **Views**
 
 1. **Keymap** — Edit the rule tables, pick physical layout ordering, save `alpha_layers.json`.
-2. **Offline sync** — Generate `.vil` files from configured folders.
-3. **Online sync** — Select a device, preview merged layout, apply to the keyboard, optionally lock.
+2. **Online sync** — Select a device, preview merged layout, apply to the keyboard. In the web app, **Connect keyboard…** asks the browser for access first.
+
+### Web app
+
+Runs in Chrome and Edge (WebHID); Firefox and Safari can edit the configuration but not connect keyboards. Keyboard access needs HTTPS (or `localhost`). The GitHub workflow `.github/workflows/web.yml` tests every push and publishes `master` to GitHub Pages once Pages is enabled (Settings → Pages → Source: GitHub Actions). The web app reads everything a backup needs, but only writes keys, encoders, layout options, combos, tap dance, key overrides and alt repeat keys; Vial keyboards only (not VIA-only firmware).
 
 Filesystem choices are represented in the renderer by opaque, window-scoped grants. Actual paths and file operations remain in Electron's main process.
 
-**Packaged builds** (see `package.json`): `npm run dist`, `npm run dist:mac`, `npm run dist:win`. Each platform-specific build stages the seed configuration and matching Vitaly binary first.
+**Packaged builds** (in `shells/electron`, see `package.json`): `npm run dist`, `npm run dist:mac`, `npm run dist:win`. Each build first builds the shared app and stages the seed configuration and matching vitaly binary.
 
 ### vitaly (online sync)
 
-The app resolves the vitaly binary in this order (development): `gui-electron/bin/vitaly` (or `.exe`), then a matching-OS build under `Reference only/vitaly-main/target/release/`, then `vitaly` on `PATH`. Production bundles ship vitaly under `resources/bin/`.
+The app resolves the vitaly binary in this order (development): `shells/electron/bin/vitaly` (or `.exe`), then a matching-OS build under `Reference only/vitaly-main/target/release/`, then `vitaly` on `PATH`. Production bundles ship vitaly under `resources/bin/`.
 
-Fetch a release binary into `gui-electron/bin/`:
+Fetch a release binary into `shells/electron/bin/`:
 
 ```bash
-cd gui-electron
+cd shells/electron
 npm run fetch-vitaly
 ```
 
@@ -130,14 +129,14 @@ This tag push triggers the workflow in `.github/workflows/gui-electron-release.y
 ### 3) What the workflow does
 
 - **macOS runner (`macos-latest`)**
-  - Installs dependencies in `gui-electron/`
+  - Installs dependencies at the repo root and in `shells/electron/`, runs tests
   - Runs `npm run dist:mac`
   - Signs the app with your Developer ID certificate
   - Submits for notarization and staples the ticket (when Apple credentials are configured)
   - Uploads macOS artifacts (`dmg`, `zip`)
 
 - **Windows runner (`windows-latest`)**
-  - Installs dependencies in `gui-electron/`
+  - Installs dependencies at the repo root and in `shells/electron/`, runs tests
   - Runs `npm run dist:win`
   - Builds native Windows artifacts on Windows (required for native modules such as `node-hid`)
   - Uploads Windows artifacts (`nsis`, `zip`)
@@ -158,3 +157,17 @@ After the workflow finishes:
 ### 5) Why Windows is built on GitHub (not on macOS)
 
 Cross-compiling Electron apps with native Node modules from macOS to Windows is unreliable and often unsupported by `node-gyp`. The recommended approach is exactly what this pipeline does: build each platform on its native GitHub-hosted runner.
+
+## License
+
+KeymapSync is licensed under the GNU General Public License v3.0 or later. See `LICENSE`.
+
+### Credits
+
+The web app's keyboard code builds on these open-source projects:
+
+- [vial-gui](https://github.com/vial-kb/vial-gui) (GPL-2.0-or-later) — reference for the Vial protocol (keymap, dynamic entries, unlock).
+- [VIA app](https://github.com/the-via/app) (GPL-3.0) — reference for WebHID device picking.
+- [vitaly](https://github.com/bskaplou/vitaly) (MIT, © 2025 Boris Kaplunovsky) — keycode name tables (`app/src/core/vial-keycode-tables.js`) and the Keymap State format.
+- pipette — reference for reading the keyboard definition.
+- [xz-decompress](https://github.com/httptoolkit/xz-decompress) (MIT) — decompressing the keyboard definition in the browser.

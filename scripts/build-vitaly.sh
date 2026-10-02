@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the vendored vitaly CLI used by gui-electron (dev picks target/release/vitaly).
+# Build the vendored vitaly CLI used by shells/electron (dev picks target/release/vitaly).
 # Requires **native** Rust on your machine so the binary matches macOS/Windows/Linux.
 # For a Linux-only compile via Docker (e.g. CI), use ./scripts/build-vitaly-docker.sh
 set -euo pipefail

@@ -1,0 +1,47 @@
+name: Web app
+
+# Tests the shared app and the web shell on every push and pull request, and
+# publishes the web app (WebHID) to GitHub Pages from master. Pages must be
+# enabled once: Settings -> Pages -> Source: "GitHub Actions".
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+  pull_request:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: End-to-end test with a simulated keyboard
+        run: |
+          npx playwright-core install --with-deps chromium
+          npm run test:e2e
+      - uses: actions/upload-pages-artifact@v4
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+        with:
+          path: dist/web
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

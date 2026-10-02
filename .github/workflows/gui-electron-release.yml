@@ -20,20 +20,24 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
-          cache-dependency-path: gui-electron/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            shells/electron/package-lock.json
 
       - name: Install deps
-        working-directory: gui-electron
-        run: npm ci
+        run: |
+          npm ci
+          npm ci --prefix shells/electron
 
       - name: Run tests
-        working-directory: gui-electron
-        run: npm test
+        run: |
+          npm test
+          npm test --prefix shells/electron
 
       - name: Build signed/notarized macOS artifacts
-        working-directory: gui-electron
+        working-directory: shells/electron
         env:
           # Signing certificate (.p12) base64 in GitHub secret APPLE_CERT_P12_BASE64.
           CSC_LINK: ${{ secrets.APPLE_CERT_P12_BASE64 }}
@@ -48,11 +52,11 @@ jobs:
           else
             BUILD_VERSION="$(node -p "require('./package.json').version")"
           fi
-          node scripts/prep-dist.js
+          node scripts/prep-dist.cjs
           npx electron-builder --mac --publish never --config.extraMetadata.version="${BUILD_VERSION}"
 
       - name: Smoke check macOS bundle contents
-        working-directory: gui-electron
+        working-directory: shells/electron
         shell: bash
         run: |
           set -euo pipefail
@@ -64,17 +68,16 @@ jobs:
           const asarPath = process.env.ASAR_PATH;
           const out = execFileSync('npx', ['asar', 'list', asarPath], { encoding: 'utf8' });
           const mustContain = [
-            'kle-parser.js',
-            'keycode-mapping.js',
-            'kle-rect-union.js',
-            'renderer.js',
-            'config-session.js',
-            'editor-workflow.js',
-            'offline-workflow.js',
-            'online-workflow.js',
-            'config-validation.js',
-            'alpha-layers.schema.json',
-            'file-authority.js'
+            'main.js',
+            'preload.cjs',
+            'device-transport.js',
+            'file-authority.js',
+            'hid-definition.js',
+            'core/config-validation.js',
+            'core/keymap-state.js',
+            'core/vial-definition.js',
+            'renderer/index.html',
+            'alpha_layers.json'
           ];
           const missing = mustContain.filter((f) => !out.includes(f));
           if (missing.length) {
@@ -87,10 +90,10 @@ jobs:
         with:
           name: KeymapSync-macos
           path: |
-            gui-electron/dist/*.dmg
-            gui-electron/dist/*.zip
-            gui-electron/dist/*.blockmap
-            gui-electron/dist/latest-mac.yml
+            shells/electron/dist/*.dmg
+            shells/electron/dist/*.zip
+            shells/electron/dist/*.blockmap
+            shells/electron/dist/latest-mac.yml
 
   build-windows:
     name: Build Windows (unsigned)
@@ -102,20 +105,24 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
-          cache-dependency-path: gui-electron/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            shells/electron/package-lock.json
 
       - name: Install deps
-        working-directory: gui-electron
-        run: npm ci
+        run: |
+          npm ci
+          npm ci --prefix shells/electron
 
       - name: Run tests
-        working-directory: gui-electron
-        run: npm test
+        run: |
+          npm test
+          npm test --prefix shells/electron
 
       - name: Build unsigned Windows artifacts
-        working-directory: gui-electron
+        working-directory: shells/electron
         shell: bash
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
@@ -125,11 +132,11 @@ jobs:
           else
             BUILD_VERSION="$(node -p "require('./package.json').version")"
           fi
-          node scripts/prep-dist.js
+          node scripts/prep-dist.cjs
           npx electron-builder --win --x64 --publish never --config.extraMetadata.version="${BUILD_VERSION}"
 
       - name: Smoke check Windows bundle contents
-        working-directory: gui-electron
+        working-directory: shells/electron
         shell: bash
         run: |
           set -euo pipefail
@@ -167,17 +174,16 @@ jobs:
           });
           const out = execFileSync(process.execPath, [asarCli, 'list', asarPath], { encoding: 'utf8' });
           const mustContain = [
-            'kle-parser.js',
-            'keycode-mapping.js',
-            'kle-rect-union.js',
-            'renderer.js',
-            'config-session.js',
-            'editor-workflow.js',
-            'offline-workflow.js',
-            'online-workflow.js',
-            'config-validation.js',
-            'alpha-layers.schema.json',
-            'file-authority.js'
+            'main.js',
+            'preload.cjs',
+            'device-transport.js',
+            'file-authority.js',
+            'hid-definition.js',
+            'core/config-validation.js',
+            'core/keymap-state.js',
+            'core/vial-definition.js',
+            'renderer/index.html',
+            'alpha_layers.json'
           ];
           const missing = mustContain.filter((f) => !out.includes(f));
           if (missing.length) {
@@ -190,10 +196,10 @@ jobs:
         with:
           name: KeymapSync-windows
           path: |
-            gui-electron/dist/*.exe
-            gui-electron/dist/*.zip
-            gui-electron/dist/*.blockmap
-            gui-electron/dist/latest*.yml
+            shells/electron/dist/*.exe
+            shells/electron/dist/*.zip
+            shells/electron/dist/*.blockmap
+            shells/electron/dist/latest*.yml
 
   release:
     name: Publish GitHub Release Assets
