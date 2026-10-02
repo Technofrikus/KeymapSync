@@ -35,16 +35,16 @@ platform interface, and each shell implements it:
 This matches the existing seam: `device-transport.js` already hides vitaly behind
 exactly these keyboard calls, and the renderer already goes through `window.api`.
 
-## Phase 0 — Streamline (in current Electron app)
+## Phase 0 — Streamline (in current Electron app) — done
 
 Small, low risk, makes every later phase smaller.
 
 - Remove the Offline Sync screen: `offline-workflow.js`, its test, the nav button
   and view in `index.html`, `generator:run` IPC, the `directory:*` grant flow if
   nothing else uses it, and related docs/smoke-test steps.
-- Decide on the command-line tool (`generate_vial_keymaps.js` at repo root and the
-  `original/` / `output/` folders): keep it as a developer tool or remove it too.
-  The transformation module itself stays — online sync uses it.
+- Remove the command-line tool (`generate_vial_keymaps.js` at repo root and the
+  `original/` / `output/` folders). The transformation module itself stays — online
+  sync uses it — and no longer touches the file system.
 - Delete `gui-electron/unsued icons/`.
 - Update README and `docs/*`.
 
@@ -97,9 +97,8 @@ Risks:
 - Writing the Vial protocol is the largest new piece; keep scope to what KeymapSync
   actually changes.
 - Unlock (Vial security) needs a user key-press flow in the UI.
-- Licensing: vial-gui and VIA are GPL. Copying code makes our app GPL; the project
-  is MIT today (and `vial-fetch-definition.js` is already GPL-2.0-or-later).
-  Decide license before Phase 2.
+- Licensing: the project is GPL-3.0-or-later, so code from vial-gui (GPL-2.0-or-later)
+  and VIA (GPL-3.0) may be reused with attribution.
 
 Done when: a user can open the site in Chrome/Edge, connect a keyboard, edit
 mappings, preview and write — same result as the desktop app.
@@ -143,9 +142,8 @@ and both shells get it. It can run in parallel with Phase 3.
 
 Each phase ships on its own; the Electron app keeps working until Phase 3 replaces it.
 
-## Decisions needed
+## Decisions
 
-1. Keep or remove the command-line tool (Phase 0).
-2. License: stay MIT (write protocol code ourselves, reference only) or switch to GPL
-   (allows copying from vial-gui/VIA).
-3. Web first or desktop first after Phase 1 (recommendation: web first).
+1. Command-line tool: removed (Phase 0).
+2. License: GPL-3.0-or-later.
+3. Order after Phase 1: web first.

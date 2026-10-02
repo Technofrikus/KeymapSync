@@ -43,13 +43,6 @@ Run this checklist against a development build and one supported Vial keyboard b
 2. Pick configuration B. Confirm the app warns before discarding the edit (or allows saving it) and never writes A's in-memory content into B.
 3. Reopen both files and verify A and B contain their original independent contents.
 
-## Offline generation
-
-1. Choose an input directory and a separate output directory.
-2. Run **Offline Sync** after an edit; generation must save the active config first.
-3. Confirm the generator completes, originals are unchanged, generated files contain the expected UID, and logs include the exit code.
-4. Restore the initial keyboard backup and repeat the physical smoke check if the keyboard was modified.
-
 ## Release evidence
 
 Attach the backup filename, keyboard/firmware details, screenshots or logs for any failure, and a completed checklist to the release record. A physical-keyboard test is not replaced by unit tests; rerun it after changes to IPC, transformation, online preview/apply, backup, or close/save behavior.

@@ -1,6 +1,6 @@
 # KeymapSync
 
-**Rule-based Vial keymap sync** for multiple keyboards: you define one JSON rule set (per-key layer assignments, language/OS translation context, and optional combo / tap-dance / key-override rules). The tool applies those rules to each board’s `.vil` layout so symbol and number layers stay aligned with your alpha keys—without hand-editing every file.
+**Rule-based Vial keymap sync** for multiple keyboards: you define one JSON rule set (per-key layer assignments, language/OS translation context, and optional combo / tap-dance / key-override rules). The app applies those rules to each connected keyboard so symbol and number layers stay aligned with your alpha keys—without hand-editing every layout.
 
 ## How the rules work
 
@@ -16,11 +16,8 @@ Optional `mappingsVersion` in the config is reserved for future format evolution
 
 | Capability | Description |
 |------------|-------------|
-| **Batch `.vil` generation** | Read every `.vil` in `original/`, apply rules, write `*_edited.vil` to `output/` (originals unchanged). |
-| **CLI** | `node generate_vial_keymaps.js` from repo root (Node 18+). No npm dependencies for the generator. |
 | **Electron GUI** | Visual editor for alpha table, combos, and tap dances; schema-validated configuration; configurable paths; logs; unsaved-change guard. |
 | **Layout sorting** | Editor can order keys as QWERTY, Dvorak, Colemak, or alphabetical—cosmetic only; rules are still keyed by letter. |
-| **Offline sync** | Run the same generation as the CLI from the app with chosen input/output folders. |
 | **Online sync** | Talk to a connected Vial keyboard over USB via [vitaly](https://github.com/bskaplou/vitaly): list devices, dump live JSON, merge preview, write back, optional EEPROM lock. stderr is interpreted so failures surface even when vitaly exits 0. |
 | **Keyboard geometry** | Fetch compressed KLE-style definitions from the device (Vial HID) to preview layouts and place keys visually in the online flow. |
 
@@ -29,12 +26,9 @@ Optional `mappingsVersion` in the config is reserved for future format evolution
 | Path | Role |
 |------|------|
 | `alpha_layers.json` | Rule configuration (edit this or use the GUI). |
-| `original/` | Source `.vil` files (one per keyboard). |
-| `output/` | Generated `*_edited.vil` files. |
-| `generate_vial_keymaps.js` | Command-line adapter for the shared transformation module in `gui-electron/`. |
-| `generate_vial_keymaps.test.js` | Regression checks for the shared transformation module. Run all GUI tests with `cd gui-electron && npm test`. |
 | `gui-electron/` | Electron app (`npm install`, `npm start`). |
 | `gui-electron/alpha-layers.schema.json` | Machine-readable configuration schema used alongside semantic validation. |
+| `docs/platform-plan.md` | Roadmap: shared app with web (WebHID) and Tauri desktop shells. |
 | `docs/manual-electron-smoke-test.md` | Release checklist for backup, physical key overrides, selective apply, and close/save behavior. |
 
 ## `alpha_layers.json`
@@ -51,16 +45,6 @@ Optional `mappingsVersion` in the config is reserved for future format evolution
 - **`keyOverrideOverrides`**: Objects merged into `key_override` with `trigger` / `replacement` translation where applicable.
 - **`*Example` keys**: Reference shapes only; not applied unless copied into the live `*Overrides` arrays.
 
-## Command line
-
-From the repository root:
-
-```bash
-node generate_vial_keymaps.js
-```
-
-Check `output/` for updated files; import in Vial or use online sync from the GUI.
-
 ## GUI (`gui-electron/`)
 
 ```bash
@@ -73,8 +57,7 @@ npm start
 **Views**
 
 1. **Keymap** — Edit the rule tables, pick physical layout ordering, save `alpha_layers.json`.
-2. **Offline sync** — Generate `.vil` files from configured folders.
-3. **Online sync** — Select a device, preview merged layout, apply to the keyboard, optionally lock.
+2. **Online sync** — Select a device, preview merged layout, apply to the keyboard, optionally lock.
 
 Filesystem choices are represented in the renderer by opaque, window-scoped grants. Actual paths and file operations remain in Electron's main process.
 
@@ -158,3 +141,7 @@ After the workflow finishes:
 ### 5) Why Windows is built on GitHub (not on macOS)
 
 Cross-compiling Electron apps with native Node modules from macOS to Windows is unreliable and often unsupported by `node-gyp`. The recommended approach is exactly what this pipeline does: build each platform on its native GitHub-hosted runner.
+
+## License
+
+KeymapSync is licensed under the GNU General Public License v3.0 or later. See `LICENSE`.

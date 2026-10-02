@@ -40,9 +40,6 @@ const defaultPaths = (() => {
   if (isDev) {
     return {
       config: path.join(repoRoot, 'alpha_layers.json'),
-      input: path.join(repoRoot, 'original'),
-      output: path.join(repoRoot, 'output'),
-      script: path.join(__dirname, 'generate_vial_keymaps.js'),
       vitaly
     };
   }
@@ -51,9 +48,6 @@ const defaultPaths = (() => {
   const appDataDir = path.join(userDataRoot, 'KeymapSync');
   return {
     config: path.join(appDataDir, 'alpha_layers.json'),
-    input: path.join(appDataDir, 'original'),
-    output: path.join(appDataDir, 'output'),
-    script: path.join(__dirname, 'generate_vial_keymaps.js'),
     vitaly
   };
 })();
@@ -80,14 +74,7 @@ function ensureSeedConfig() {
   fs.copyFileSync(bundled, defaultPaths.config);
 }
 
-function ensureDefaultFolders() {
-  if (isDev) return;
-  ensureDir(defaultPaths.input);
-  ensureDir(defaultPaths.output);
-}
-
 ensureSeedConfig();
-ensureDefaultFolders();
 
 const deviceTransport = createDeviceTransport({
   runCommand: createVitalyRunner({
@@ -285,12 +272,6 @@ ipcMain.handle('app:defaults', (event) => {
     config: fileAuthority.register(defaultPaths.config, {
       owner, kind: 'config', operations: ['read', 'write']
     }),
-    input: fileAuthority.register(defaultPaths.input, {
-      owner, kind: 'input', operations: ['read']
-    }),
-    output: fileAuthority.register(defaultPaths.output, {
-      owner, kind: 'output', operations: ['write']
-    }),
   };
 });
 
@@ -372,24 +353,6 @@ ipcMain.handle('config:save', async (event, grantId, config) => {
   return { grant: fileAuthority.publicGrant(grant), displayPath: grant.path };
 });
 
-ipcMain.handle('directory:choose', async (event, payload = {}) => {
-  const owner = ownerFor(event);
-  const opts = assertPlainObject(payload, 'directory selection');
-  if (!['input', 'output'].includes(opts.kind)) throw new FileAuthorityError('Directory kind must be input or output.', 'INVALID_KIND');
-  let defaultPath;
-  if (opts.currentGrantId !== undefined) {
-    defaultPath = fileAuthority.resolve(opts.currentGrantId, { owner, kind: opts.kind }).path;
-  }
-  const result = await dialog.showOpenDialog(windowFor(event), {
-    properties: ['openDirectory'],
-    defaultPath,
-  });
-  if (result.canceled || !result.filePaths?.length) return null;
-  return fileAuthority.register(result.filePaths[0], {
-    owner, kind: opts.kind, operations: opts.kind === 'input' ? ['read'] : ['write']
-  });
-});
-
 ipcMain.handle('vial:saveBackup', async (event, payload = {}) => {
   ownerFor(event);
   const opts = assertPlainObject(payload, 'backup');
@@ -411,32 +374,4 @@ ipcMain.handle('generator:process', async (event, doc, config) => {
   assertPlainObject(config, 'config');
   parseAndValidateConfig(config, 'configuration');
   return generator.transformKeymapState(doc, config);
-});
-
-ipcMain.handle('generator:run', async (event, opts = {}) => {
-  const owner = ownerFor(event);
-  const payload = assertPlainObject(opts, 'generator options');
-  const configGrant = fileAuthority.resolve(payload.configGrant, { owner, kind: 'config', operation: 'read' });
-  const inputGrant = fileAuthority.resolve(payload.inputGrant, { owner, kind: 'input', operation: 'read' });
-  const outputGrant = fileAuthority.resolve(payload.outputGrant, { owner, kind: 'output', operation: 'write' });
-  const log = (msg) => event.sender.send('log:data', `${msg}\n`);
-
-  try {
-    log('Starting generator internally...');
-    const config = parseAndValidateConfig(fs.readFileSync(configGrant.path, 'utf8'), configGrant.path);
-    if (!fs.existsSync(outputGrant.path)) fs.mkdirSync(outputGrant.path, { recursive: true });
-    const { results, warnings } = await generator.transformVilDirectory({
-      inputDir: inputGrant.path,
-      outputDir: outputGrant.path,
-      config,
-    });
-    log(`Processed ${results.length} file(s).`);
-    results.forEach(({ inputPath, outputPath }) => log(`Processed: ${path.basename(inputPath)} -> ${path.basename(outputPath)}`));
-    warnings.forEach((warning) => log(`Warning: untranslated symbol ${warning}`));
-    log('Generator finished successfully.');
-    return { code: 0 };
-  } catch (err) {
-    log(`Error: ${err.message}`);
-    return { code: 1, error: err.message };
-  }
 });

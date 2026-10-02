@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const defaultFs = require('fs');
 const defaultPath = require('path');
 
-const KINDS = new Set(['config', 'input', 'output', 'backup']);
+const KINDS = new Set(['config', 'backup']);
 const OPERATIONS = new Set(['read', 'write']);
 
 class FileAuthorityError extends Error {

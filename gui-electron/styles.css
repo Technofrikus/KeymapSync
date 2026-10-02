@@ -108,37 +108,7 @@ body {
   flex-direction: column;
 }
 
-/* Offline Sync Styles */
-.sync-card {
-  background: #0f172a;
-  border: 1px solid #1f2937;
-  border-radius: 12px;
-  padding: 24px;
-  margin-top: 20px;
-  max-width: 600px;
-}
-
-.path-summary {
-  margin-bottom: 24px;
-}
-
-.path-item {
-  display: flex;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-.path-item .label {
-  width: 100px;
-  color: #94a3b8;
-  font-weight: 500;
-}
-
-.path-item .value {
-  color: #e5e7eb;
-  word-break: break-all;
-}
-
+/* Shared Sync Styles */
 .big-btn {
   padding: 12px 24px;
   font-size: 16px;

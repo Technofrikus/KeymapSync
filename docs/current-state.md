@@ -2,15 +2,14 @@
 
 ## Key Features
 - **Online Sync**: Direct writing to Vial keyboards.
-- **Offline Sync**: Batch processing of `.vil` files.
 - **Visual KLE**: UI rendering of keyboard layouts.
 - **Advanced Overrides**: Support for Tap-Dance, Combos, and Key-Overrides.
 
 ## Recently Changed / Hot Modules
-- `gui-electron/editor-workflow.js`, `offline-workflow.js`, `online-workflow.js`: Separate renderer workflows composed by a small `renderer.js`.
+- `gui-electron/editor-workflow.js`, `online-workflow.js`: Separate renderer workflows composed by a small `renderer.js`.
 - `gui-electron/config-validation.js`: Shared schema and semantic validation for every configuration ingress.
 - `gui-electron/file-authority.js`: Owner-scoped filesystem grants for renderer IPC.
-- `gui-electron/generate_vial_keymaps.js`: Shared translation tables (de, fr, es, en), transformation logic, and `.vil` UID-safe persistence.
+- `gui-electron/generate_vial_keymaps.js`: Shared translation tables (de, fr, es, en), and pure transformation logic.
 - `gui-electron/device-transport.js`: Vitaly device protocol, including discovery, snapshots, applying state, locking, and layout lookup.
 
 ## Large TODOs / Future Work

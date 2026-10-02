@@ -16,7 +16,6 @@
       </div>
       <nav class="view-nav">
         <button id="viewKeymapBtn" class="nav-btn active">Keymap</button>
-        <button id="viewOfflineBtn" class="nav-btn">Offline Sync</button>
         <button id="viewOnlineBtn" class="nav-btn">Online Sync</button>
       </nav>
       <div class="top-actions">
@@ -99,8 +98,6 @@
             <div class="help-body">
               <div class="hint-block">
                 <div><strong>Config:</strong> <span id="configPathLabel"></span></div>
-                <div><strong>Input:</strong> <span id="inputPathLabel"></span></div>
-                <div><strong>Output:</strong> <span id="outputPathLabel"></span></div>
               </div>
               <h4>Tap-Dance Help</h4>
               <ul id="tapdanceList"></ul>
@@ -220,33 +217,6 @@
         </div>
       </section>
 
-      <!-- Offline Sync View -->
-      <section id="offlineView" class="view">
-        <div class="view-header">
-          <h2>Offline Sync</h2>
-          <p class="description">Generate updated .vil files from your original layouts.</p>
-        </div>
-        
-        <div class="sync-card">
-          <div class="path-summary">
-            <div class="path-item">
-              <span class="label">Originals:</span>
-              <span id="offlineInputPath" class="value"></span>
-            </div>
-            <div class="path-item">
-              <span class="label">Output:</span>
-              <span id="offlineOutputPath" class="value"></span>
-            </div>
-          </div>
-          
-          <div class="sync-actions">
-            <button id="runOfflineSyncBtn" class="primary big-btn">Generate .vil files</button>
-          </div>
-          
-          <div id="offlineStatus" class="sync-status"></div>
-        </div>
-      </section>
-
       <!-- Online Sync View -->
       <section id="onlineView" class="view">
         <div class="view-header">
@@ -342,20 +312,6 @@
             <button id="pickConfig">Pick…</button>
           </div>
         </div>
-        <div class="field">
-          <label>Original folder</label>
-          <div class="inline">
-            <input id="inputPath" type="text" readonly />
-            <button id="pickInput">Pick…</button>
-          </div>
-        </div>
-        <div class="field">
-          <label>Output folder</label>
-          <div class="inline">
-            <input id="outputPath" type="text" readonly />
-            <button id="pickOutput">Pick…</button>
-          </div>
-        </div>
         <div class="actions">
           <button id="reloadConfig">Reload</button>
           <button id="saveConfig">Save config</button>
@@ -377,7 +333,6 @@
     <script src="./kle-rect-union.js"></script>
     <script src="./keymap-presentation.js"></script>
     <script src="./config-session.js"></script>
-    <script src="./offline-workflow.js"></script>
     <script src="./online-workflow.js"></script>
     <script src="./editor-workflow.js"></script>
     <script src="./renderer.js"></script>

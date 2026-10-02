@@ -5,9 +5,7 @@ contextBridge.exposeInMainWorld('api', {
   chooseConfig: () => ipcRenderer.invoke('config:choose'),
   loadConfig: (grantId) => ipcRenderer.invoke('config:load', grantId),
   saveConfig: (grantId, config) => ipcRenderer.invoke('config:save', grantId, config),
-  chooseDirectory: (kind, currentGrantId) => ipcRenderer.invoke('directory:choose', { kind, currentGrantId }),
   saveVilBackup: (payload) => ipcRenderer.invoke('vial:saveBackup', payload),
-  runGenerator: (opts) => ipcRenderer.invoke('generator:run', opts),
   processConfig: (doc, config) => ipcRenderer.invoke('generator:process', doc, config),
   setUnsavedChanges: (hasChanges) => ipcRenderer.invoke('app:setUnsavedChanges', hasChanges),
   checkUnsavedChanges: () => ipcRenderer.invoke('app:checkUnsavedChanges'),
@@ -24,10 +22,6 @@ contextBridge.exposeInMainWorld('api', {
       }
     });
   },
-  onLog: (callback) => {
-    ipcRenderer.on('log:data', (_event, data) => callback(data));
-  },
-  clearLogListeners: () => ipcRenderer.removeAllListeners('log:data'),
   
   device: {
     discover: () => ipcRenderer.invoke('device:discover'),

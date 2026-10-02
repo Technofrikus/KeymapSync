@@ -1,7 +1,4 @@
 const assert = require('assert');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
 const {
   translateSymbol,
   extractAlphaFromKey,
@@ -10,8 +7,7 @@ const {
   replaceTapDanceNamesInString,
   buildTapDanceNameToIndex,
   processConfig,
-  transformKeymapState,
-  transformVilFile
+  transformKeymapState
 } = require('./generate_vial_keymaps');
 
 function runTests() {
@@ -61,30 +57,6 @@ function runTests() {
   );
   assert.deepStrictEqual(warningResult.warnings, ['☃']);
   assert.strictEqual(warningResult.state.layout[1][0][0], '☃');
-
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'keymapsync-test-'));
-  try {
-    const inputPath = path.join(tempDir, 'input.vil');
-    const outputDir = path.join(tempDir, 'output');
-    const uid = '12345678901234567890';
-    fs.mkdirSync(outputDir);
-    fs.writeFileSync(inputPath, `{\n  "uid": ${uid},\n  "layout": [[ ["KC_A"] ]]\n}`);
-
-    const fileResult = transformVilFile({
-      inputPath,
-      outputDir,
-      config: {
-        target: { language: 'en', os: 'mac' },
-        layers: { alpha: 0, symbol: 1, number: 2 },
-        alphaMappings: { A: { layer1: '!', layer2: '1' } }
-      }
-    });
-    assert.strictEqual(path.basename(fileResult.outputPath), 'input_edited.vil');
-    assert.match(fs.readFileSync(fileResult.outputPath, 'utf8'), new RegExp(`"uid": ${uid}`));
-    assert.match(fs.readFileSync(inputPath, 'utf8'), new RegExp(`"uid": ${uid}`));
-  } finally {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
 
   console.log('All tests passed.');
 }

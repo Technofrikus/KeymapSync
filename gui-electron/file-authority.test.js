@@ -24,13 +24,13 @@ assert.deepEqual(Object.keys(config).sort(), ['displayPath', 'id', 'kind']);
 assert.equal(authority.resolve(config.id, { owner: 11, kind: 'config', operation: 'read' }).path, config.displayPath);
 assert.equal(authority.resolve(config, { owner: 11, kind: 'config', operation: 'write' }).path, config.displayPath);
 expectCode(() => authority.resolve(config.id, { owner: 12 }), 'WRONG_OWNER');
-expectCode(() => authority.resolve(config.id, { owner: 11, kind: 'output' }), 'WRONG_KIND');
+expectCode(() => authority.resolve(config.id, { owner: 11, kind: 'backup' }), 'WRONG_KIND');
 expectCode(() => authority.resolve(config.id, { owner: 11, operation: 'execute' }), 'WRONG_OPERATION');
 
-const input = authority.register('/tmp/keysync-input', { owner: 11, kind: 'input', operations: ['read'] });
-expectCode(() => authority.resolve(input.id, { owner: 11, operation: 'write' }), 'WRONG_OPERATION');
+const backup = authority.register('/tmp/keysync-backup.vil', { owner: 11, kind: 'backup', operations: ['write'] });
+expectCode(() => authority.resolve(backup.id, { owner: 11, operation: 'read' }), 'WRONG_OPERATION');
 authority.revokeOwner(11);
 expectCode(() => authority.resolve(config.id, { owner: 11 }), 'UNKNOWN_GRANT');
-expectCode(() => authority.resolve(input.id, { owner: 11 }), 'UNKNOWN_GRANT');
+expectCode(() => authority.resolve(backup.id, { owner: 11 }), 'UNKNOWN_GRANT');
 
 console.log('file-authority tests passed');

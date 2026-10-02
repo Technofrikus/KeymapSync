@@ -1,51 +1,13 @@
-#!/usr/bin/env node
-
 /**
- * Vial/VIA .vil generator
- * - Reads mapping from alpha_layers.json
- * - Applies per-letter symbol/number layers (layer1/layer2) across keyboards
+ * Keymap State transformation module.
+ * - Applies per-letter symbol/number layers (layer1/layer2) from an Alpha Mapping config
  * - Optionally replaces alpha keys with tap-dance or other codes via `base`
  * - Optionally overrides combos, tap_dance, key_override sections
- * - Emits updated .vil files to ./output
  *
- * No external dependencies. Node 18+ required for built-in fetch.
+ * Pure data transformation: no file system or device access.
  */
 
-const fs = require("fs");
-const path = require("path");
-const { assertValidConfig, parseConfig } = require("./config-validation");
-
-const ROOT = path.resolve(__dirname, "..");
-const INPUT_DIR = path.join(ROOT, "original");
-const OUTPUT_DIR = path.join(ROOT, "output");
-const CONFIG_PATH = path.join(ROOT, "alpha_layers.json");
-
-function loadJsonWithUid(filePath) {
-  const raw = fs.readFileSync(filePath, "utf8");
-  const uidMatch = raw.match(/"uid"\s*:\s*([0-9]+)/);
-  const uidLiteral = uidMatch ? uidMatch[1] : null;
-  const parsed = JSON.parse(raw);
-  return { doc: parsed, uidLiteral };
-}
-
-function saveJsonWithUid(filePath, data, uidLiteral) {
-  const json = JSON.stringify(data, null, 2);
-  if (uidLiteral) {
-    const replaced = json.replace(
-      /"uid"\s*:\s*"?[0-9A-Za-z]+"?/,
-      `"uid": ${uidLiteral}`,
-    );
-    fs.writeFileSync(filePath, replaced);
-  } else {
-    fs.writeFileSync(filePath, json);
-  }
-}
-
-function ensureOutputDir(outputDir = OUTPUT_DIR) {
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
-}
+const { assertValidConfig } = require("./config-validation");
 
 // Translation tables for plain KC_* output (no locale-specific keycodes)
 // Language codes: de, fr, es, en; OS codes: mac, win, linux
@@ -740,44 +702,8 @@ function applyOverrides(doc, config, runId) {
   }
 }
 
-function transformVilFile({ inputPath, outputDir = OUTPUT_DIR, config, runId = null }) {
-  const { doc, uidLiteral } = loadJsonWithUid(inputPath);
-  const { state, warnings } = transformKeymapState(doc, config, runId);
-  const { name, ext } = path.parse(inputPath);
-  const outputPath = path.join(outputDir, `${name}_edited${ext}`);
-  saveJsonWithUid(outputPath, state, uidLiteral);
-  return { inputPath, outputPath, warnings };
-}
-
-async function transformVilDirectory({ inputDir = INPUT_DIR, outputDir = OUTPUT_DIR, config, runId = null }) {
-  ensureOutputDir(outputDir);
-  const files = fs.readdirSync(inputDir).filter((file) => file.endsWith(".vil"));
-  const results = files.map((file) =>
-    transformVilFile({ inputPath: path.join(inputDir, file), outputDir, config, runId }),
-  );
-  return { results, warnings: results.flatMap((result) => result.warnings) };
-}
-
-async function main() {
-  if (!fs.existsSync(CONFIG_PATH)) throw new Error(`Config not found at ${CONFIG_PATH}`);
-  const config = parseConfig(fs.readFileSync(CONFIG_PATH, "utf8"), CONFIG_PATH);
-  await transformVilDirectory({ config });
-}
-
-if (require.main === module) {
-  main().catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
-}
-
 module.exports = {
-  main,
-  loadJsonWithUid,
-  saveJsonWithUid,
   transformKeymapState,
-  transformVilFile,
-  transformVilDirectory,
   translateSymbol,
   extractAlphaFromKey,
   buildAliasMap,

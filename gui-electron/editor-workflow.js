@@ -968,7 +968,6 @@ copyLogs.addEventListener('click', async () => {
   setStatus(runStatus, 'Logs copied');
 });
 
-window.api.onLog((data) => appendLog(data));
 
 // Panel resize from left edge
 if (helpPanelResize) {
